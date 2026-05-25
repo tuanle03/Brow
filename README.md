@@ -1,4 +1,8 @@
-# Brow
+<h1 align="center">
+  <img src="Brow/Assets.xcassets/AppIcon.appiconset/brow-icon-256.png" width="128" alt="Brow icon">
+  <br>
+  Brow
+</h1>
 
 Brow is a personal macOS notch-overlay app built on top of
 [**boring.notch**](https://github.com/TheBoredTeam/boring.notch) by The
@@ -12,15 +16,37 @@ grows from there.
 ## Status
 
 Early. The upstream import has just landed; bundle identifiers,
-signing, and CI have been rebranded but the user-facing surface still
-reads largely as boring.notch. Brow-specific UI, icon, and feature
-work happens on follow-up branches.
+signing, app icon, menu/Settings copy and CI have been rebranded.
+The first downloadable build ships unsigned by an Apple Developer ID,
+so the install flow requires one extra step (below).
+
+## Install
+
+1. Download the latest `Brow-x.y.z.dmg` from
+   [Releases](https://github.com/tuanle03/Brow/releases).
+2. Open the DMG and drag **Brow.app** into `/Applications`.
+3. Brow is **ad-hoc signed** (no paid Apple Developer ID yet), so
+   macOS Gatekeeper will refuse to launch it on first run. Strip the
+   download-quarantine flag with one command:
+
+   ```bash
+   xattr -dr com.apple.quarantine /Applications/Brow.app
+   ```
+
+4. Launch Brow from Applications. You'll be prompted for the
+   permissions Brow needs (calendar, accessibility, camera, etc.) —
+   grant whichever features you want to use.
+
+> Alternative: instead of step 3, you can right-click Brow.app in
+> Finder → **Open** → **Open** in the prompt. That also bypasses
+> Gatekeeper but only works for some users on recent macOS versions;
+> the `xattr` command is the reliable fallback.
 
 ## Requirements
 
 - macOS **14 Sonoma** or later
-- Xcode **16** or later (Swift toolchain bundled with it)
 - Apple Silicon or Intel Mac
+- Xcode **16** or later (only needed to build from source)
 
 ## Build from source
 
