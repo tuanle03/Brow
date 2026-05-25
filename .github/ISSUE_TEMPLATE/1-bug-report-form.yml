@@ -37,6 +37,7 @@ body:
       options:
         - Select a version
         - v2.7.3
+        - v1.0.0
         - v0.3-clean-reimplementation
     validations:
       required: true
