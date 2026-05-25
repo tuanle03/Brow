@@ -3,7 +3,8 @@
 //  Brow
 //
 //  Tiny now-playing strip that fits inside the closed/hovered notch silhouette:
-//  small artwork on the left edge + animated waveform on the right edge.
+//  small artwork followed by an animated waveform when playback is active.
+//  No trailing spacer — outer layouts arrange this alongside other widgets.
 //
 
 import SwiftUI
@@ -13,11 +14,11 @@ struct NowPlayingCompactView: View {
     let artwork: NSImage?
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 4) {
             artworkView
                 .frame(width: 22, height: 22)
                 .clipShape(RoundedRectangle(cornerRadius: 4))
-            Spacer(minLength: 0)
+
             if track?.isPlaying == true {
                 Image(systemName: "waveform")
                     .font(.caption2)
