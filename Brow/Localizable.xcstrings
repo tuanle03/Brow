@@ -3802,102 +3802,102 @@
         }
       }
     },
-    "boring.notch" : {
+    "Brow" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "boring.notch"
+            "value" : "Brow"
           }
         },
         "cs" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "boring.notch"
+            "value" : "Brow"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "boring.notch"
+            "value" : "Brow"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "boring.notch"
+            "value" : "Brow"
           }
         },
         "en-GB" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "boring.notch"
+            "value" : "Brow"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "boring.notch"
+            "value" : "Brow"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "boring.notch"
+            "value" : "Brow"
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "boring.notch"
+            "value" : "Brow"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "boring.notch"
+            "value" : "Brow"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "boring.notch"
+            "value" : "Brow"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "boring.notch"
+            "value" : "Brow"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "boring.notch"
+            "value" : "Brow"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "boring.notch"
+            "value" : "Brow"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "boring.notch"
+            "value" : "Brow"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "boring.notch"
+            "value" : "Brow"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "boring.notch"
+            "value" : "Brow"
           }
         }
       }
