@@ -1165,8 +1165,8 @@ struct Appearance: View {
     @Default(.customVisualizers) var customVisualizers
     @Default(.selectedVisualizer) var selectedVisualizer
 
-    let icons: [String] = ["logo2"]
-    @State private var selectedIcon: String = "logo2"
+    let icons: [String] = ["brow-logo"]
+    @State private var selectedIcon: String = "brow-logo"
     @State private var selectedListVisualizer: CustomVisualizer? = nil
     @State private var isPresented: Bool = false
     @State private var name: String = ""
@@ -1418,8 +1418,8 @@ struct Advanced: View {
     
     @State private var customAccentColor: Color = .accentColor
     @State private var selectedPresetColor: PresetAccentColor? = nil
-    let icons: [String] = ["logo2"]
-    @State private var selectedIcon: String = "logo2"
+    let icons: [String] = ["brow-logo"]
+    @State private var selectedIcon: String = "brow-logo"
     
     // macOS accent colors
     enum PresetAccentColor: String, CaseIterable, Identifiable {
