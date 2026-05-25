@@ -7,6 +7,7 @@ import SwiftUI
 
 struct NotchLayout: View {
     let coordinator: BrowViewCoordinator
+    private let music = MusicManager.shared
 
     private var size: CGSize {
         switch coordinator.currentState {
@@ -36,31 +37,20 @@ struct NotchLayout: View {
     @ViewBuilder
     private var content: some View {
         switch coordinator.currentState {
-        case .closed:
-            EmptyView()
-        case .hovered:
-            HStack(spacing: 6) {
-                Image(systemName: "sparkles")
-                    .foregroundStyle(.white)
-                    .font(.caption)
-                Spacer(minLength: 0)
+        case .closed, .hovered:
+            if music.currentTrack?.hasContent == true {
+                NowPlayingCompactView(track: music.currentTrack, artwork: music.artworkImage)
+            } else {
+                EmptyView()
             }
         case .open:
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Image(systemName: "sparkles")
-                        .foregroundStyle(.white)
-                    Text("Brow")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                    Spacer()
-                }
-                Text("Music · Calendar · HUD · Shelf coming soon")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.6))
-                Spacer(minLength: 0)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            NowPlayingExpandedView(
+                track: music.currentTrack,
+                artwork: music.artworkImage,
+                onPrev: { Task { await music.previous() } },
+                onPlayPause: { Task { await music.togglePlayPause() } },
+                onNext: { Task { await music.next() } }
+            )
         }
     }
 }

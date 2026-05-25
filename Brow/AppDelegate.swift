@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         Task { @MainActor in
             WindowManager.shared.spawnNotchWindows()
+            MusicManager.shared.start()
         }
 
         NotificationCenter.default.addObserver(
