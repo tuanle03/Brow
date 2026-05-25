@@ -2,23 +2,26 @@
 //  ContentView.swift
 //  Brow
 //
-//  Created by Tuan Le on 25/5/26.
-//
 
 import SwiftUI
 
 struct ContentView: View {
+    private let coordinator = BrowViewCoordinator.shared
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        VStack(spacing: 0) {
+            NotchLayout(coordinator: coordinator)
+                .onHover { hovering in
+                    coordinator.isHovering = hovering
+                }
+            Spacer(minLength: 0)
         }
-        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }
 
 #Preview {
     ContentView()
+        .frame(width: 600, height: 200)
+        .background(Color.gray)
 }

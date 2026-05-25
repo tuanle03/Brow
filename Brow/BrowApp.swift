@@ -2,16 +2,20 @@
 //  BrowApp.swift
 //  Brow
 //
-//  Created by Tuan Le on 25/5/26.
-//
 
 import SwiftUI
 
 @main
 struct BrowApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+
     var body: some Scene {
-        WindowGroup {
-            ContentView()
+        MenuBarExtra("Brow", systemImage: "sparkles") {
+            StatusBarMenu()
+        }
+
+        Settings {
+            SettingsView()
         }
     }
 }
