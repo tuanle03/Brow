@@ -9,9 +9,10 @@ struct NotchLayout: View {
     let coordinator: BrowViewCoordinator
     private let music = MusicManager.shared
     private let battery = BatteryActivityManager.shared
+    private let calendar = CalendarManager.shared
 
-    /// When a sneak peek is showing we use the "hovered" silhouette size so
-    /// there's room for the overlay content, regardless of hover state.
+    /// When a sneak peek is showing we use a slightly larger silhouette so the
+    /// overlay has breathing room, regardless of hover state.
     private var size: CGSize {
         if coordinator.sneakPeek != nil {
             return CGSize(width: 260, height: 44)
@@ -65,16 +66,31 @@ struct NotchLayout: View {
         }
     }
 
+    /// Two-column layout for the expanded notch:
+    /// - Left column: now-playing + battery
+    /// - Right column: upcoming calendar events
     private var expandedContent: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            NowPlayingExpandedView(
-                track: music.currentTrack,
-                artwork: music.artworkImage,
-                onPrev: { Task { await music.previous() } },
-                onPlayPause: { Task { await music.togglePlayPause() } },
-                onNext: { Task { await music.next() } }
+        HStack(alignment: .top, spacing: 14) {
+            VStack(alignment: .leading, spacing: 10) {
+                NowPlayingExpandedView(
+                    track: music.currentTrack,
+                    artwork: music.artworkImage,
+                    onPrev: { Task { await music.previous() } },
+                    onPlayPause: { Task { await music.togglePlayPause() } },
+                    onNext: { Task { await music.next() } }
+                )
+                BatteryDetailView(info: battery.info)
+            }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+
+            Divider()
+                .overlay(Color.white.opacity(0.08))
+
+            CalendarListView(
+                events: calendar.upcomingEvents,
+                authStatus: calendar.authorizationStatus
             )
-            BatteryDetailView(info: battery.info)
+            .frame(width: 220, alignment: .topLeading)
         }
     }
 

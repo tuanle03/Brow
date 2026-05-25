@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             WindowManager.shared.spawnNotchWindows()
             MusicManager.shared.start()
             BatteryActivityManager.shared.start()
+            CalendarManager.shared.start()
         }
 
         NotificationCenter.default.addObserver(
