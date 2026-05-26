@@ -1,13 +1,13 @@
 //
-//  BoringNotchWindow.swift
-//  boringNotch
+//  BrowNotchWindow.swift
+//  Brow
 //
 //  Created by Harsh Vardhan  Goswami  on 06/08/24.
 //
 
 import Cocoa
 
-class BoringNotchWindow: NSPanel {
+class BrowNotchWindow: NSPanel {
     override init(
         contentRect: NSRect,
         styleMask: NSWindow.StyleMask,

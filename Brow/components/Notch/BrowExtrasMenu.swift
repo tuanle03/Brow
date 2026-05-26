@@ -1,13 +1,13 @@
 //
-//  BoringExtrasMenu.swift
-//  boringNotch
+//  BrowExtrasMenu.swift
+//  Brow
 //
 //  Created by Harsh Vardhan  Goswami  on 04/08/24.
 //
 
 import SwiftUI
 
-struct BoringLargeButtons: View {
+struct BrowLargeButtons: View {
     var action: () -> Void
     var icon: Image
     var title: String
@@ -27,8 +27,8 @@ struct BoringLargeButtons: View {
     }
 }
 
-struct BoringExtrasMenu : View {
-    @ObservedObject var vm: BoringViewModel
+struct BrowExtrasMenu : View {
+    @ObservedObject var vm: BrowViewModel
     
     var body: some View {
         VStack{
@@ -41,7 +41,7 @@ struct BoringExtrasMenu : View {
     }
     
     var github: some View {
-        BoringLargeButtons(
+        BrowLargeButtons(
             action: {
                 if let url = URL(string: "https://github.com/tuanle03/Brow") {
                     NSWorkspace.shared.open(url)
@@ -71,7 +71,7 @@ struct BoringExtrasMenu : View {
     }
     
     var hide: some View {
-        BoringLargeButtons(
+        BrowLargeButtons(
             action: {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
                     //vm.openMusic()
@@ -83,7 +83,7 @@ struct BoringExtrasMenu : View {
     }
     
     var close: some View {
-        BoringLargeButtons(
+        BrowLargeButtons(
             action: {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
@@ -99,5 +99,5 @@ struct BoringExtrasMenu : View {
 
 
 #Preview {
-    BoringExtrasMenu(vm: .init())
+    BrowExtrasMenu(vm: .init())
 }

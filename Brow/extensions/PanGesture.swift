@@ -1,6 +1,6 @@
 //
 //  PanGesture.swift
-//  boringNotch
+//  Brow
 //
 //  Created by Richard Kunkli on 21/08/2024.
 //

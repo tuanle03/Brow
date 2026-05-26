@@ -1,6 +1,6 @@
 //
-//  boringNotchApp.swift
-//  boringNotchApp
+//  BrowApp.swift
+//  BrowApp
 //
 //  Created by Harsh Vardhan  Goswami  on 02/08/24.
 //
@@ -52,10 +52,10 @@ struct DynamicNotchApp: App {
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem?
     var windows: [String: NSWindow] = [:] // UUID -> NSWindow
-    var viewModels: [String: BoringViewModel] = [:] // UUID -> BoringViewModel
+    var viewModels: [String: BrowViewModel] = [:] // UUID -> BrowViewModel
     var window: NSWindow?
-    let vm: BoringViewModel = .init()
-    @ObservedObject var coordinator = BoringViewCoordinator.shared
+    let vm: BrowViewModel = .init()
+    @ObservedObject var coordinator = BrowViewCoordinator.shared
     var quickShareService = QuickShareService.shared
     var whatsNewWindow: NSWindow?
     var timer: Timer?
@@ -112,12 +112,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func enableSkyLightOnAllWindows() {
         if Defaults[.showOnAllDisplays] {
             windows.values.forEach { window in
-                if let skyWindow = window as? BoringNotchSkyLightWindow {
+                if let skyWindow = window as? BrowSkyLightWindow {
                     skyWindow.enableSkyLight()
                 }
             }
         } else {
-            if let skyWindow = window as? BoringNotchSkyLightWindow {
+            if let skyWindow = window as? BrowSkyLightWindow {
                 skyWindow.enableSkyLight()
             }
         }
@@ -131,12 +131,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             await MainActor.run {
                 if Defaults[.showOnAllDisplays] {
                     self.windows.values.forEach { window in
-                        if let skyWindow = window as? BoringNotchSkyLightWindow {
+                        if let skyWindow = window as? BrowSkyLightWindow {
                             skyWindow.disableSkyLight()
                         }
                     }
                 } else {
-                    if let skyWindow = self.window as? BoringNotchSkyLightWindow {
+                    if let skyWindow = self.window as? BrowSkyLightWindow {
                         skyWindow.disableSkyLight()
                     }
                 }
@@ -231,11 +231,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func createBoringNotchWindow(for screen: NSScreen, with viewModel: BoringViewModel) -> NSWindow {
+    private func createBrowNotchWindow(for screen: NSScreen, with viewModel: BrowViewModel) -> NSWindow {
         let rect = NSRect(x: 0, y: 0, width: windowSize.width, height: windowSize.height)
         let styleMask: NSWindow.StyleMask = [.borderless, .nonactivatingPanel, .utilityWindow, .hudWindow]
         
-        let window = BoringNotchSkyLightWindow(contentRect: rect, styleMask: styleMask, backing: .buffered, defer: false)
+        let window = BrowSkyLightWindow(contentRect: rect, styleMask: styleMask, backing: .buffered, defer: false)
         
         // Enable SkyLight only when screen is locked
         if isScreenLocked {
@@ -412,7 +412,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         if !Defaults[.showOnAllDisplays] {
             let viewModel = self.vm
-            let window = createBoringNotchWindow(
+            let window = createBrowNotchWindow(
                 for: NSScreen.main ?? NSScreen.screens.first!, with: viewModel)
             self.window = window
             adjustWindowPosition(changeAlpha: true)
@@ -440,7 +440,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func playWelcomeSound() {
         let audioPlayer = AudioPlayer()
-        audioPlayer.play(fileName: "boring", fileExtension: "m4a")
+        audioPlayer.play(fileName: "welcome", fileExtension: "m4a")
     }
 
     func deviceHasNotch() -> Bool {
@@ -493,8 +493,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let uuid = screen.displayUUID else { continue }
                 
                 if windows[uuid] == nil {
-                    let viewModel = BoringViewModel(screenUUID: uuid)
-                    let window = createBoringNotchWindow(for: screen, with: viewModel)
+                    let viewModel = BrowViewModel(screenUUID: uuid)
+                    let window = createBrowNotchWindow(for: screen, with: viewModel)
 
                     windows[uuid] = window
                     viewModels[uuid] = viewModel
@@ -529,7 +529,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             vm.notchSize = getClosedNotchSize(screenUUID: selectedScreen.displayUUID)
 
             if window == nil {
-                window = createBoringNotchWindow(for: selectedScreen, with: vm)
+                window = createBrowNotchWindow(for: selectedScreen, with: vm)
             }
 
             if let window = window {

@@ -1,6 +1,6 @@
 //
 //  SettingsWindowController.swift
-//  boringNotch
+//  Brow
 //
 //  Created by Alexander on 2025-06-14.
 //
@@ -55,7 +55,7 @@ class SettingsWindowController: NSWindowController {
         
         // Configure window to be a standard document-style window
         window.isRestorable = true
-        window.identifier = NSUserInterfaceItemIdentifier("BoringNotchSettingsWindow")
+        window.identifier = NSUserInterfaceItemIdentifier("BrowSettingsWindow")
         
         // Create the SwiftUI content
         let settingsView = SettingsView(updaterController: updaterController)

@@ -1,6 +1,6 @@
 //
 //  OnboardingView.swift
-//  boringNotch
+//  Brow
 //
 //  Created by Alexander on 2025-06-23.
 //
@@ -128,7 +128,7 @@ struct OnboardingView: View {
                 MusicControllerSelectionView(
                     onContinue: {
                         withAnimation(.easeInOut(duration: 0.6)) {
-                            BoringViewCoordinator.shared.firstLaunch = false
+                            BrowViewCoordinator.shared.firstLaunch = false
                             step = .finished
                         }
                     }

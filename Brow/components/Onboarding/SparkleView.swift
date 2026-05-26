@@ -1,6 +1,6 @@
 //
 //  SparkleView.swift
-//  boringNotch
+//  Brow
 //
 //  Created by Richard Kunkli on 2024. 09. 26..
 //

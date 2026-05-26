@@ -1,6 +1,6 @@
 //
 //  ContentView.swift
-//  boringNotchApp
+//  BrowApp
 //
 //  Created by Harsh Vardhan Goswami  on 02/08/24
 //  Modified by Richard Kunkli on 24/08/2024.
@@ -15,10 +15,10 @@ import SwiftUIIntrospect
 
 @MainActor
 struct ContentView: View {
-    @EnvironmentObject var vm: BoringViewModel
+    @EnvironmentObject var vm: BrowViewModel
     @ObservedObject var webcamManager = WebcamManager.shared
 
-    @ObservedObject var coordinator = BoringViewCoordinator.shared
+    @ObservedObject var coordinator = BrowViewCoordinator.shared
     @ObservedObject var musicManager = MusicManager.shared
     @ObservedObject var batteryModel = BatteryStatusViewModel.shared
     @ObservedObject var brightnessManager = BrightnessManager.shared
@@ -272,7 +272,7 @@ struct ContentView: View {
                                 .frame(width: vm.closedNotchSize.width + 10)
 
                             HStack {
-                                BoringBatteryView(
+                                BrowBatteryView(
                                     batteryWidth: 30,
                                     isCharging: batteryModel.isCharging,
                                     isInLowPowerMode: batteryModel.isInLowPowerMode,
@@ -291,9 +291,9 @@ struct ContentView: View {
                           MusicLiveActivity()
                               .frame(alignment: .center)
                       } else if !coordinator.expandingView.show && vm.notchState == .closed && (!musicManager.isPlaying && musicManager.isPlayerIdle) && Defaults[.showNotHumanFace] && !vm.hideOnClosed  {
-                          BoringFaceAnimation()
+                          BrowFaceAnimation()
                        } else if vm.notchState == .open {
-                           BoringHeader()
+                           BrowHeader()
                                .frame(height: max(24, vm.effectiveClosedNotchHeight))
                                .opacity(gestureProgress != 0 ? 1.0 - min(abs(gestureProgress) * 0.1, 0.3) : 1.0)
                        } else {
@@ -365,7 +365,7 @@ struct ContentView: View {
     }
 
     @ViewBuilder
-    func BoringFaceAnimation() -> some View {
+    func BrowFaceAnimation() -> some View {
         HStack {
             HStack {
                 Rectangle()
@@ -652,7 +652,7 @@ struct GeneralDropTargetDelegate: DropDelegate {
 }
 
 #Preview {
-    let vm = BoringViewModel()
+    let vm = BrowViewModel()
     vm.open()
     return ContentView()
         .environmentObject(vm)
