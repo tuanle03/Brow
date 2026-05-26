@@ -498,8 +498,15 @@ struct HUD: View {
                             .foregroundStyle(.secondary)
 
                         HStack(spacing: 12) {
-                            Button("Request Accessibility") {
+                            Button("Open Accessibility Settings") {
+                                // Still attempt the helper-side TCC prompt for properly-signed builds.
                                 XPCHelperClient.shared.requestAccessibilityAuthorization()
+                                // Always open System Settings → Privacy & Security → Accessibility
+                                // so ad-hoc / unsigned builds (where the TCC prompt silently no-ops)
+                                // can still give the user a one-click path to grant the permission.
+                                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                                    NSWorkspace.shared.open(url)
+                                }
                             }
                             .buttonStyle(.borderedProminent)
                         }
