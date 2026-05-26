@@ -1,6 +1,6 @@
 //
-//  BoringNotchXPCHelper.swift
-//  BoringNotchXPCHelper
+//  BrowXPCHelper.swift
+//  BrowXPCHelper
 //
 //  Created by Alexander on 2025-11-16.
 //
@@ -10,7 +10,7 @@ import ApplicationServices
 import IOKit
 import CoreGraphics
 
-class BoringNotchXPCHelper: NSObject, BoringNotchXPCHelperProtocol {
+class BrowXPCHelper: NSObject, BrowXPCHelperProtocol {
     
     @objc func isAccessibilityAuthorized(with reply: @escaping (Bool) -> Void) {
         reply(AXIsProcessTrusted())

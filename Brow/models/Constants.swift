@@ -1,6 +1,6 @@
 //
 //  Constants.swift
-//  boringNotch
+//  Brow
 //
 //  Created by Richard Kunkli on 2024. 10. 17..
 //

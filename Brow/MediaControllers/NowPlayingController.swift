@@ -1,6 +1,6 @@
 //
 //  NowPlayingController.swift
-//  boringNotch
+//  Brow
 //
 //  Created by Alexander on 2025-03-29.
 //

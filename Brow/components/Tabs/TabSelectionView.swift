@@ -1,6 +1,6 @@
 //
 //  TabSelectionView.swift
-//  boringNotch
+//  Brow
 //
 //  Created by Hugo Persson on 2024-08-25.
 //
@@ -20,7 +20,7 @@ let tabs = [
 ]
 
 struct TabSelectionView: View {
-    @ObservedObject var coordinator = BoringViewCoordinator.shared
+    @ObservedObject var coordinator = BrowViewCoordinator.shared
     @Namespace var animation
     var body: some View {
         HStack(spacing: 0) {
@@ -51,5 +51,5 @@ struct TabSelectionView: View {
 }
 
 #Preview {
-    BoringHeader().environmentObject(BoringViewModel())
+    BrowHeader().environmentObject(BrowViewModel())
 }

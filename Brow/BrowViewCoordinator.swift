@@ -1,6 +1,6 @@
 //
-//  BoringViewCoordinator.swift
-//  boringNotch
+//  BrowViewCoordinator.swift
+//  Brow
 //
 //  Created by Alexander on 2024-11-20.
 //
@@ -47,8 +47,8 @@ struct ExpandedItem {
 }
 
 @MainActor
-class BoringViewCoordinator: ObservableObject {
-    static let shared = BoringViewCoordinator()
+class BrowViewCoordinator: ObservableObject {
+    static let shared = BrowViewCoordinator()
 
     @Published var currentView: NotchViews = .home
     @Published var helloAnimationRunning: Bool = false

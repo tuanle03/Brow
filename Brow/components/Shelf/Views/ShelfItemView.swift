@@ -1,6 +1,6 @@
 //
 //  ShelfItemView.swift
-//  boringNotch
+//  Brow
 //
 //  Created by Alexander on 2025-09-24.
 //
@@ -13,7 +13,7 @@ import QuickLook
 
 struct ShelfItemView: View {
     let item: ShelfItem
-    @EnvironmentObject var vm: BoringViewModel
+    @EnvironmentObject var vm: BrowViewModel
     @ObservedObject var selection = ShelfSelectionModel.shared
     @StateObject private var viewModel: ShelfItemViewModel
     @EnvironmentObject private var quickLookService: QuickLookService

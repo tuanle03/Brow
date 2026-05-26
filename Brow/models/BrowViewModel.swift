@@ -1,6 +1,6 @@
 //
-//  BoringViewModel.swift
-//  boringNotch
+//  BrowViewModel.swift
+//  Brow
 //
 //  Created by Harsh Vardhan  Goswami  on 04/08/24.
 //
@@ -9,11 +9,11 @@ import Combine
 import Defaults
 import SwiftUI
 
-class BoringViewModel: NSObject, ObservableObject {
-    @ObservedObject var coordinator = BoringViewCoordinator.shared
+class BrowViewModel: NSObject, ObservableObject {
+    @ObservedObject var coordinator = BrowViewCoordinator.shared
     @ObservedObject var detector = FullscreenMediaDetector.shared
 
-    let animationLibrary: BoringAnimations = .init()
+    let animationLibrary: BrowAnimations = .init()
     let animation: Animation?
 
     @Published var contentType: ContentType = .normal

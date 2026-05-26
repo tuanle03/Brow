@@ -1,6 +1,6 @@
 //
 //  LiveActivityModifier.swift
-//  boringNotch
+//  Brow
 //
 //  Created by Richard Kunkli on 12/08/2024.
 //
