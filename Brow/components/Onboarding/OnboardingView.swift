@@ -7,6 +7,7 @@
 
 import SwiftUI
 import AVFoundation
+import AppKit
 
 enum OnboardingStep {
     case welcome
@@ -157,6 +158,12 @@ struct OnboardingView: View {
     }
     
     func requestAccessibilityPermission() async {
+        // Try the helper-side TCC prompt first (only does anything for properly-signed builds).
         await XPCHelperClient.shared.ensureAccessibilityAuthorization(promptIfNeeded: true)
+        // Also surface the System Settings pane directly, since on ad-hoc builds
+        // the TCC prompt silently no-ops and the user needs a one-click path to grant.
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+            await MainActor.run { NSWorkspace.shared.open(url) }
+        }
     }
 }
