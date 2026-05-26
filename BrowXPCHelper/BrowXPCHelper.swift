@@ -102,17 +102,17 @@ class BrowXPCHelper: NSObject, BrowXPCHelperProtocol {
     // MARK: - Screen Brightness (moved from client app into helper)
 
     @objc func isScreenBrightnessAvailable(with reply: @escaping (Bool) -> Void) {
-        var b: Float = 0
-        reply(displayServicesGetBrightness(displayID: CGMainDisplayID(), out: &b) || ioServiceFor(displayID: CGMainDisplayID()) != nil)
+        reply(displaySupportsBrightness(activeDisplayID()))
     }
 
     @objc func currentScreenBrightness(with reply: @escaping (NSNumber?) -> Void) {
+        let id = activeDisplayID()
         var b: Float = 0
-        if displayServicesGetBrightness(displayID: CGMainDisplayID(), out: &b) {
+        if displayServicesGetBrightness(displayID: id, out: &b) {
             reply(NSNumber(value: b))
             return
         }
-        if let io = ioServiceFor(displayID: CGMainDisplayID()) {
+        if let io = ioServiceFor(displayID: id) {
             var level: Float = 0
             if IODisplayGetFloatParameter(io, 0, kIODisplayBrightnessKey as CFString, &level) == kIOReturnSuccess {
                 IOObjectRelease(io)
@@ -126,17 +126,53 @@ class BrowXPCHelper: NSObject, BrowXPCHelperProtocol {
 
     @objc func setScreenBrightness(_ value: Float, with reply: @escaping (Bool) -> Void) {
         let clamped = max(0, min(1, value))
-        if displayServicesSetBrightness(displayID: CGMainDisplayID(), value: clamped) {
+        let id = activeDisplayID()
+        if displayServicesSetBrightness(displayID: id, value: clamped) {
             reply(true)
             return
         }
-        if let io = ioServiceFor(displayID: CGMainDisplayID()) {
+        if let io = ioServiceFor(displayID: id) {
             let ok = IODisplaySetFloatParameter(io, 0, kIODisplayBrightnessKey as CFString, clamped) == kIOReturnSuccess
             IOObjectRelease(io)
             reply(ok)
             return
         }
         reply(false)
+    }
+
+    // MARK: - Active display resolution
+    //
+    // Picks the display whose bounds contain the current cursor location,
+    // matching how the Control Center brightness sliders are organised per
+    // display. If that display does not actually support a brightness
+    // control surface (some HDMI panels), fall back to the first display
+    // that does, then finally to the main display.
+    private func activeDisplayID() -> CGDirectDisplayID {
+        let cursor = CGEvent(source: nil)?.location ?? .zero
+        var displays = [CGDirectDisplayID](repeating: 0, count: 16)
+        var matched: UInt32 = 0
+        if CGGetDisplaysWithPoint(cursor, 16, &displays, &matched) == .success {
+            for i in 0..<Int(matched) where displaySupportsBrightness(displays[i]) {
+                return displays[i]
+            }
+        }
+        var active = [CGDirectDisplayID](repeating: 0, count: 16)
+        var activeCount: UInt32 = 0
+        if CGGetActiveDisplayList(16, &active, &activeCount) == .success {
+            for i in 0..<Int(activeCount) where displaySupportsBrightness(active[i]) {
+                return active[i]
+            }
+        }
+        return CGMainDisplayID()
+    }
+
+    private func displaySupportsBrightness(_ displayID: CGDirectDisplayID) -> Bool {
+        var b: Float = 0
+        if displayServicesGetBrightness(displayID: displayID, out: &b) { return true }
+        guard let io = ioServiceFor(displayID: displayID) else { return false }
+        defer { IOObjectRelease(io) }
+        var level: Float = 0
+        return IODisplayGetFloatParameter(io, 0, kIODisplayBrightnessKey as CFString, &level) == kIOReturnSuccess
     }
 
     // MARK: - Private helpers for DisplayServices / IOKit access
