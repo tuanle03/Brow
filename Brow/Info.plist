@@ -11,6 +11,10 @@
 	<true/>
 	<key>SUEnableInstallerLauncherService</key>
 	<true/>
+	<key>SUFeedURL</key>
+	<string>https://raw.githubusercontent.com/tuanle03/Brow/main/updater/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>X2nfTwnaRNamOjsEofkRr9ajw7Pt2rOjkMij6V7Hpis=</string>
 	<key>UTImportedTypeDeclarations</key>
 	<array>
 		<dict/>

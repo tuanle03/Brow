@@ -115,8 +115,109 @@ jobs:
             "${DMG_PATH}" \
             "Brow ${VERSION}"
           SHA=$(shasum -a 256 "${DMG_PATH}" | awk '{print $1}')
+          SIZE=$(stat -f%z "${DMG_PATH}")
           echo "path=${DMG_PATH}" >> "$GITHUB_OUTPUT"
           echo "sha256=${SHA}" >> "$GITHUB_OUTPUT"
+          echo "size=${SIZE}" >> "$GITHUB_OUTPUT"
+
+      - name: Sign DMG with Sparkle ed25519
+        id: sparkle
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SPARKLE_PRIVATE_KEY:-}" ]]; then
+            echo "::error::Repo secret SPARKLE_PRIVATE_KEY is not set. Add it (the 44-char ed25519 seed) at:"
+            echo "::error::https://github.com/${{ github.repository }}/settings/secrets/actions"
+            exit 1
+          fi
+
+          # Locate the sign_update binary that Sparkle's SwiftPM artifact ships.
+          SIGN_TOOL="$(find ~/Library/Developer/Xcode/DerivedData -name sign_update -path '*/sparkle/Sparkle/bin/sign_update' -print -quit)"
+          if [[ -z "${SIGN_TOOL}" ]]; then
+            SIGN_TOOL="$(find . -name sign_update -path '*/sparkle/Sparkle/bin/sign_update' -print -quit)"
+          fi
+          if [[ -z "${SIGN_TOOL}" || ! -x "${SIGN_TOOL}" ]]; then
+            echo "::error::Could not locate Sparkle sign_update binary."
+            exit 1
+          fi
+
+          KEY_FILE="$(mktemp)"
+          trap 'rm -f "${KEY_FILE}"' EXIT
+          printf '%s' "${SPARKLE_PRIVATE_KEY}" > "${KEY_FILE}"
+
+          SIGN_OUTPUT="$("${SIGN_TOOL}" "${{ steps.dmg.outputs.path }}" "${KEY_FILE}")"
+          echo "Raw sign output: ${SIGN_OUTPUT}"
+
+          SIGNATURE="$(printf '%s' "${SIGN_OUTPUT}" | sed -n 's/.*sparkle:edSignature="\([^"]*\)".*/\1/p')"
+          if [[ -z "${SIGNATURE}" ]]; then
+            echo "::error::Failed to parse sparkle:edSignature from sign_update output."
+            exit 1
+          fi
+          echo "edSignature=${SIGNATURE}" >> "$GITHUB_OUTPUT"
+
+      - name: Update appcast.xml
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.vers.outputs.version }}"
+          BUILD="${GITHUB_RUN_NUMBER}"
+          PUB_DATE="$(date -u "+%a, %d %b %Y %H:%M:%S +0000")"
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${{ steps.vers.outputs.tag }}/Brow-${VERSION}.dmg"
+
+          mkdir -p updater
+          cat > updater/appcast.xml <<EOF
+          <?xml version="1.0" encoding="utf-8" standalone="yes"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+              <channel>
+                  <title>Brow Updates</title>
+                  <link>https://github.com/${{ github.repository }}</link>
+                  <description>Automatic updates for Brow — a personal GPL v3 fork of boring.notch.</description>
+                  <language>en</language>
+                  <item>
+                      <title>Brow ${VERSION}</title>
+                      <pubDate>${PUB_DATE}</pubDate>
+                      <link>https://github.com/${{ github.repository }}/releases/tag/${{ steps.vers.outputs.tag }}</link>
+                      <sparkle:version>${BUILD}</sparkle:version>
+                      <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
+                      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+                      <description><![CDATA[
+                          <p>Automated release. See the <a href="https://github.com/${{ github.repository }}/releases/tag/${{ steps.vers.outputs.tag }}">GitHub release notes</a> for details.</p>
+                      ]]></description>
+                      <enclosure
+                          url="${DOWNLOAD_URL}"
+                          sparkle:edSignature="${{ steps.sparkle.outputs.edSignature }}"
+                          length="${{ steps.dmg.outputs.size }}"
+                          type="application/octet-stream"
+                      />
+                  </item>
+              </channel>
+          </rss>
+          EOF
+
+      - name: Commit appcast.xml to main
+        run: |
+          set -euo pipefail
+          # Stash the just-generated appcast so checkout main doesn't blow it away.
+          APPCAST_TMP="$(mktemp)"
+          cp updater/appcast.xml "${APPCAST_TMP}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git checkout main
+          git pull --ff-only origin main
+
+          mkdir -p updater
+          cp "${APPCAST_TMP}" updater/appcast.xml
+          rm -f "${APPCAST_TMP}"
+
+          if git diff --quiet -- updater/appcast.xml; then
+            echo "No appcast change to commit."
+            exit 0
+          fi
+          git add updater/appcast.xml
+          git commit -m "ci: update appcast for ${{ steps.vers.outputs.tag }}"
+          git push origin main
 
       - name: Write release notes
         run: |
@@ -140,6 +241,7 @@ jobs:
           - Universal binary (x86_64 + arm64)
           - macOS 14 Sonoma or later
           - SHA256: `${{ steps.dmg.outputs.sha256 }}`
+          - Sparkle signed (ed25519): users on previous Brow versions can update via *Check for Updates…*
           EOF
 
       - name: Create / push tag (workflow_dispatch only)

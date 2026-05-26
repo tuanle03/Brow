@@ -15410,6 +15410,9 @@
         }
       }
     },
+    "Open Accessibility Settings" : {
+
+    },
     "Open Calendar Settings" : {
       "localizations" : {
         "ar" : {
@@ -17511,6 +17514,7 @@
       }
     },
     "Request Accessibility" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
