@@ -155,7 +155,7 @@ jobs:
           trap 'rm -f "${KEY_FILE}"' EXIT
           printf '%s' "${SPARKLE_PRIVATE_KEY}" > "${KEY_FILE}"
 
-          SIGN_OUTPUT="$("${SIGN_TOOL}" "${{ steps.dmg.outputs.path }}" "${KEY_FILE}")"
+          SIGN_OUTPUT="$("${SIGN_TOOL}" --ed-key-file "${KEY_FILE}" "${{ steps.dmg.outputs.path }}")"
           echo "Raw sign output: ${SIGN_OUTPUT}"
 
           SIGNATURE="$(printf '%s' "${SIGN_OUTPUT}" | sed -n 's/.*sparkle:edSignature="\([^"]*\)".*/\1/p')"
