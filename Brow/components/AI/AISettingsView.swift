@@ -11,6 +11,7 @@ import SwiftUI
 /// stays diagnostic-flavoured.
 struct AISettingsView: View {
     @ObservedObject private var bridge = ClaudeCodeBridge.shared
+    @ObservedObject private var store = ClaudeCodeStore.shared
 
     @State private var installState: ClaudeCodeHookInstaller.InstallationState = .notInstalled
     @State private var hookError: String?
@@ -19,6 +20,8 @@ struct AISettingsView: View {
         Form {
             bridgeSection
             hooksSection
+            queueSection
+            rulesSection
             lastEventSection
         }
         .formStyle(.grouped)
@@ -188,6 +191,109 @@ struct AISettingsView: View {
 
     private func refreshInstallState() {
         installState = ClaudeCodeHookInstaller.currentState()
+    }
+
+    // MARK: - Approval queue (debug surface for PR #3 — real sneak peek in PR #5)
+
+    @ViewBuilder
+    private var queueSection: some View {
+        Section {
+            if store.pending.isEmpty {
+                Text("No tool calls waiting for approval.")
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(store.pending) { approval in
+                    pendingRow(approval)
+                }
+            }
+
+            HStack(spacing: 8) {
+                Button("Allow head") { store.decideHead(as: .allow) }
+                    .disabled(store.pending.isEmpty)
+                Button("Always allow head") { store.decideHead(as: .allowAlways) }
+                    .disabled(store.pending.isEmpty)
+                Button("Deny head") { store.decideHead(as: .deny) }
+                    .disabled(store.pending.isEmpty)
+                Spacer()
+                Text("\(store.pending.count) waiting / \(store.sessions.count) session\(store.sessions.count == 1 ? "" : "s")")
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("Pending approvals")
+        } footer: {
+            Text("Each PreToolUse from Claude Code blocks here until you decide (max ~55s before Brow auto-falls back to \"ask\"). The notch surface lands in a follow-up PR — for now use the buttons above to resolve the head of the queue manually.")
+        }
+    }
+
+    @ViewBuilder
+    private func pendingRow(_ approval: PendingApproval) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Text(approval.toolName)
+                    .font(.body.weight(.semibold))
+                if let session = approval.sessionID {
+                    Text("session \(String(session.prefix(8)))")
+                        .font(.caption.monospaced())
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Text(approval.receivedAt, style: .relative)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Text(approval.targetDescription)
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .truncationMode(.middle)
+            HStack(spacing: 6) {
+                Button("Allow")        { store.decide(approval.id, as: .allow) }
+                Button("Always allow") { store.decide(approval.id, as: .allowAlways) }
+                Button("Deny", role: .destructive) { store.decide(approval.id, as: .deny) }
+            }
+            .controlSize(.small)
+        }
+        .padding(.vertical, 4)
+    }
+
+    // MARK: - Saved "Always allow" rules
+
+    @ViewBuilder
+    private var rulesSection: some View {
+        Section {
+            if store.rules.isEmpty {
+                Text("No saved \"always allow\" rules.")
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(store.rules) { rule in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(rule.toolName)
+                                .font(.body.monospaced())
+                            Text(rule.argMatcher ?? "(any arguments)")
+                                .font(.caption.monospaced())
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Text(rule.decision.rawValue)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(rule.decision == .allow ? .green : .red)
+                        Button("Remove", role: .destructive) {
+                            store.removeRule(rule)
+                        }
+                        .controlSize(.small)
+                    }
+                }
+            }
+            if let err = store.lastRuleError {
+                Text(err).font(.callout).foregroundStyle(.red)
+            }
+        } header: {
+            Text("Saved rules")
+        } footer: {
+            Text("Rules live at \(PermissionRule.rulesPath). Picking \"Always allow\" on a pending entry adds a tool-name match here.")
+        }
     }
 
     // MARK: - Last event echo
