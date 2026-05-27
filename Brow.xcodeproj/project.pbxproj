@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		062C478B09CC5FF9206FCFFC /* BrowApprovalSneakPeek.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41B8B22D4BC54AF6462B68DC /* BrowApprovalSneakPeek.swift */; };
 		1100290C2E847E2800035A57 /* NSItemProvider+LoadHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1100290B2E847E2800035A57 /* NSItemProvider+LoadHelpers.swift */; };
 		110029272E84FD4C00035A57 /* TemporaryFileStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 110029262E84FD4C00035A57 /* TemporaryFileStorageService.swift */; };
 		1100292A2E8691B400035A57 /* FileShareView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 110029292E8691B400035A57 /* FileShareView.swift */; };
@@ -283,6 +284,7 @@
 		14E9FEAD2C7325770062E83F /* Button+Bouncing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Button+Bouncing.swift"; sourceTree = "<group>"; };
 		14FC6E4F2C7DED5600C7BEA5 /* DataTypes+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DataTypes+Extensions.swift"; sourceTree = "<group>"; };
 		32BA6C5A41A6A419B7511B48 /* AISettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AISettingsView.swift; sourceTree = "<group>"; };
+		41B8B22D4BC54AF6462B68DC /* BrowApprovalSneakPeek.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BrowApprovalSneakPeek.swift; sourceTree = "<group>"; };
 		507266DA2C908E2E00A2D00D /* HoverButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoverButton.swift; sourceTree = "<group>"; };
 		5565EAB6E4A626F41BEC5B04 /* ClaudeCodeStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClaudeCodeStore.swift; sourceTree = "<group>"; };
 		5917FD102E57891600E87F1C /* MediaKeyInterceptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaKeyInterceptor.swift; sourceTree = "<group>"; };
@@ -454,6 +456,7 @@
 				9827C1AD5BA0F5A25573640C /* ClaudeCodeHookInstaller.swift */,
 				5565EAB6E4A626F41BEC5B04 /* ClaudeCodeStore.swift */,
 				8D14452ED0A9D6795FB34556 /* BrowMascot.swift */,
+				41B8B22D4BC54AF6462B68DC /* BrowApprovalSneakPeek.swift */,
 			);
 			name = AI;
 			path = AI;
@@ -1072,6 +1075,7 @@
 				D35FE994D92D4D4E9E8A7880 /* ClaudeCodeHookInstaller.swift in Sources */,
 				F2857591B33CD27086D05868 /* ClaudeCodeStore.swift in Sources */,
 				D538121168B5C735A0DF143C /* BrowMascot.swift in Sources */,
+				062C478B09CC5FF9206FCFFC /* BrowApprovalSneakPeek.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
