@@ -6,23 +6,19 @@
         <description>Automatic updates for Brow — a personal GPL v3 fork of boring.notch.</description>
         <language>en</language>
         <item>
-            <title>Brow 1.0.3</title>
-            <pubDate>Tue, 26 May 2026 06:34:08 +0000</pubDate>
-            <link>https://github.com/tuanle03/Brow/releases/tag/v1.0.3</link>
-            <sparkle:version>103</sparkle:version>
-            <sparkle:shortVersionString>1.0.3</sparkle:shortVersionString>
+            <title>Brow 1.1.0</title>
+            <pubDate>Wed, 27 May 2026 05:16:25 +0000</pubDate>
+            <link>https://github.com/tuanle03/Brow/releases/tag/v1.1.0</link>
+            <sparkle:version>7</sparkle:version>
+            <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <description><![CDATA[
-                <h3>What's new</h3>
-                <ul>
-                    <li><strong>Auto-updates now work.</strong> Brow wires Sparkle to a Brow-specific signed appcast feed; future versions will install via "Check for Updates…" without a manual download.</li>
-                    <li>Includes everything from v1.0.2 (open System Settings → Accessibility from the prompt button) and v1.0.1 (brightness follows the display under the cursor).</li>
-                </ul>
+                <p>Automated release. See the <a href="https://github.com/tuanle03/Brow/releases/tag/v1.1.0">GitHub release notes</a> for details.</p>
             ]]></description>
             <enclosure
-                url="https://github.com/tuanle03/Brow/releases/download/v1.0.3/Brow-1.0.3.dmg"
-                sparkle:edSignature="vEIl7c3ouTDrus3EsUi3hWFSME+pNaADOyir2P0ZTc7A1Y7OgcICHdyx1eJR9Hc3YmUuyUQTl/0iunkPGzZIBw=="
-                length="10347475"
+                url="https://github.com/tuanle03/Brow/releases/download/v1.1.0/Brow-1.1.0.dmg"
+                sparkle:edSignature="iOLR2ImB2E3vdTthHxPrgTqDtVYnNluUr3j4tQ7jo2pDEnQh2i4DUWZuGRealBO4zFUpQopsy4edryhIauUWCA=="
+                length="11436506"
                 type="application/octet-stream"
             />
         </item>
