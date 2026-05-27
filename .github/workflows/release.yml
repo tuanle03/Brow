@@ -132,13 +132,24 @@ jobs:
             exit 1
           fi
 
-          # Locate the sign_update binary that Sparkle's SwiftPM artifact ships.
-          SIGN_TOOL="$(find ~/Library/Developer/Xcode/DerivedData -name sign_update -path '*/sparkle/Sparkle/bin/sign_update' -print -quit)"
-          if [[ -z "${SIGN_TOOL}" ]]; then
-            SIGN_TOOL="$(find . -name sign_update -path '*/sparkle/Sparkle/bin/sign_update' -print -quit)"
+          # Sparkle bundles its CLI tools inside the binary release tarball,
+          # not the SwiftPM checkout. Pull the same version Brow links against
+          # and use sign_update from there. Avoids depending on whether the
+          # CI cache laid out DerivedData the way we expect.
+          SPARKLE_VERSION="2.9.1"
+          SPARKLE_DIR="${RUNNER_TEMP}/sparkle-${SPARKLE_VERSION}"
+          if [[ ! -x "${SPARKLE_DIR}/bin/sign_update" ]]; then
+            mkdir -p "${SPARKLE_DIR}"
+            curl --silent --show-error --location --fail \
+              "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz" \
+              -o "${RUNNER_TEMP}/sparkle.tar.xz"
+            tar -xJf "${RUNNER_TEMP}/sparkle.tar.xz" -C "${SPARKLE_DIR}"
           fi
-          if [[ -z "${SIGN_TOOL}" || ! -x "${SIGN_TOOL}" ]]; then
-            echo "::error::Could not locate Sparkle sign_update binary."
+
+          SIGN_TOOL="${SPARKLE_DIR}/bin/sign_update"
+          if [[ ! -x "${SIGN_TOOL}" ]]; then
+            echo "::error::Could not locate Sparkle sign_update at ${SIGN_TOOL}"
+            ls -la "${SPARKLE_DIR}" "${SPARKLE_DIR}/bin" 2>&1 || true
             exit 1
           fi
 
