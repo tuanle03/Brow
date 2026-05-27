@@ -1,4 +1,5 @@
 import SwiftUI
+import Defaults
 
 /// Brow's AI Sessions mascot — themed for the project name ("brow" =
 /// eyebrows): two eyes with two expressive brows, plus a mouth that changes
@@ -20,9 +21,19 @@ struct BrowMascot: View {
     var pendingCount: Int = 0
     var size: CGFloat = 24
 
+    @Default(.selectedAIMascotVisualizer) private var aiMascotVisualizer
+
     var body: some View {
         if state == .hidden {
             EmptyView()
+        } else if let lottie = aiMascotVisualizer {
+            // User-picked Lottie replaces the built-in SwiftUI mascot.
+            // Same scale rules as the music visualizer so the value the
+            // user dials in stays consistent across both slots.
+            LottieView(url: lottie.url, speed: lottie.speed, loopMode: .loop)
+                .scaleEffect(lottie.scale, anchor: .center)
+                .frame(width: size + 14, height: size + 14)
+                .overlay(alignment: .topTrailing) { badge }
         } else {
             TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
                 let t = context.date.timeIntervalSinceReferenceDate

@@ -13,12 +13,14 @@ struct LottieView: NSViewRepresentable {
     let url: URL
     let speed: Double
     let loopMode: LottieLoopMode
+    var contentMode: LottieContentMode = .scaleAspectFit
 
     private static var associatedURLKey: UInt8 = 0
 
     func makeNSView(context: Context) -> NSView {
         let animationView = LottieAnimationView()
         animationView.translatesAutoresizingMaskIntoConstraints = false
+        animationView.contentMode = contentMode
         let container = NSView()
         container.addSubview(animationView)
         NSLayoutConstraint.activate([
@@ -32,6 +34,7 @@ struct LottieView: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSView, context: Context) {
         guard let animationView = nsView.subviews.first as? LottieAnimationView else { return }
+        animationView.contentMode = contentMode
         let lastURL = objc_getAssociatedObject(animationView, &Self.associatedURLKey) as? URL
         if lastURL != url {
             LottieAnimation.loadedFrom(url: url) { animation in

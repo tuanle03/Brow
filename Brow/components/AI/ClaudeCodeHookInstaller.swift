@@ -16,20 +16,35 @@ import Foundation
 /// install / uninstall from a Button action.
 enum ClaudeCodeHookInstaller {
 
-    /// MVP hook coverage. Matches user's decision — `PreToolUse` for
-    /// permission prompts + `Notification` for "Claude finished" badges.
-    static let coveredHooks: [String] = ["PreToolUse", "Notification"]
+    /// Hook events Brow subscribes to:
+    /// - `SessionStart` / `SessionEnd`: keep the Sessions list live, so the
+    ///   notch knows Claude is running the instant a CLI session opens —
+    ///   no waiting for the first permission prompt.
+    /// - `PermissionRequest`: only fires when Claude Code would otherwise
+    ///   show its native permission dialog, so the notch UI mirrors the
+    ///   CLI 1:1 (no double-prompting on auto-allowed tools).
+    /// - `Notification`: "Claude is waiting / idle" alerts.
+    /// - `Stop`: Claude finished the current turn, drives the "done" toast.
+    ///
+    /// Install/uninstall sweep every hook key (not just these) for our
+    /// command, so older Brow builds that wrote into `PreToolUse` get
+    /// cleaned up automatically on the next install.
+    static let coveredHooks: [String] = [
+        "SessionStart",
+        "SessionEnd",
+        "PermissionRequest",
+        "Notification",
+        "Stop",
+    ]
 
     enum InstallationState: Equatable {
         case notInstalled
         case installed
-        /// Settings.json references our path AND another tool's hook command
+        /// Settings.json references our hook AND another tool's hook command
         /// at the same hook. Not strictly a conflict — Claude Code runs all
         /// matching hooks in parallel — but surface it so the user knows
         /// they might see double prompts.
         case installedWithSiblings(siblingCommands: [String])
-        /// Our script is on disk but settings.json doesn't mention us.
-        case scriptOrphaned
     }
 
     enum InstallError: LocalizedError {
@@ -57,98 +72,69 @@ enum ClaudeCodeHookInstaller {
 
     // MARK: - Paths
 
+    /// Real user home — `NSHomeDirectory()` returns the sandbox container
+    /// when Brow runs sandboxed, and Claude Code only reads the *actual*
+    /// `~/.claude/settings.json`. `getpwuid` is not redirected by the
+    /// sandbox so it gives us the host home path.
+    static var realHomeDirectory: String {
+        if let pw = getpwuid(getuid()), let dir = pw.pointee.pw_dir {
+            return String(cString: dir)
+        }
+        return NSHomeDirectory()
+    }
+
+    /// Legacy path of the standalone hook script Brow used to write before
+    /// switching to an inline `curl` command. Kept so uninstall can clean
+    /// up the file written by older builds.
     static var hookScriptPath: String {
-        (NSHomeDirectory() as NSString).appendingPathComponent(".brow/hooks/brow-claude-hook")
+        (realHomeDirectory as NSString).appendingPathComponent(".brow/hooks/brow-claude-hook")
     }
 
     static var claudeSettingsPath: String {
-        (NSHomeDirectory() as NSString).appendingPathComponent(".claude/settings.json")
+        (realHomeDirectory as NSString).appendingPathComponent(".claude/settings.json")
     }
+
+    /// Inline shell command Claude Code runs for each covered hook event.
+    /// Pipes the hook payload from stdin into the local bridge and prints
+    /// the response back to stdout. Embedding the command in settings.json
+    /// avoids the on-disk hook script entirely — macOS slaps
+    /// `com.apple.quarantine` on any file a sandboxed app writes outside
+    /// its container, and the sandbox does not let us strip it, so the
+    /// file would never be exec'able.
+    static let hookCommand: String =
+        "curl --silent --max-time 60 -H 'Content-Type: application/json' --data-binary @- http://127.0.0.1:21064/event"
 
     // MARK: - Public API
 
     static func install() throws {
-        try writeHookScript()
         try mutateSettings { settings in
             attachOurHook(to: &settings)
         }
+        removeLegacyHookScript()
     }
 
     static func uninstall() throws {
         try mutateSettings { settings in
             detachOurHook(from: &settings)
         }
-        // Leave ~/.brow/hooks/brow-claude-hook on disk. It is harmless once
-        // settings.json no longer references it, and keeping it avoids the
-        // re-install having to re-prompt the user about TCC on write.
+        removeLegacyHookScript()
     }
 
     static func currentState() -> InstallationState {
-        let scriptExists = FileManager.default.fileExists(atPath: hookScriptPath)
         let settings = (try? loadSettings()) ?? [:]
         let referenced = settingsReferenceOurHook(settings)
-
-        if !scriptExists && !referenced { return .notInstalled }
-        if scriptExists && !referenced { return .scriptOrphaned }
-
+        if !referenced { return .notInstalled }
         let siblings = siblingCommandsAlongsideOurs(in: settings)
-        if siblings.isEmpty {
-            return .installed
-        } else {
-            return .installedWithSiblings(siblingCommands: siblings)
-        }
+        return siblings.isEmpty ? .installed : .installedWithSiblings(siblingCommands: siblings)
     }
 
-    // MARK: - Hook script
-
-    /// The exact text Brow writes to `~/.brow/hooks/brow-claude-hook`. POSIX
-    /// shell so it survives whatever shell environment Claude Code runs.
-    /// Stdin → POST → stdout. Default to "ask" if Brow isn't running so the
-    /// user still gets the native Claude Code prompt.
-    static let hookScriptBody: String = #"""
-    #!/bin/sh
-    # Brow Claude Code hook bridge.
-    # Forwards the hook's stdin JSON to the local Brow listener and
-    # prints Brow's response to stdout so Claude Code can pick up the
-    # permission decision.
-    #
-    # Managed by Brow.app — do not edit by hand. Re-install from
-    # Brow > Settings > AI Sessions if this file gets out of date.
-
-    set -e
-
-    BROW_URL="http://127.0.0.1:21064/event"
-    PAYLOAD=$(cat)
-
-    if ! command -v curl >/dev/null 2>&1; then
-        # No curl on PATH — let Claude Code prompt the user normally.
-        exit 0
-    fi
-
-    RESPONSE=$(printf '%s' "$PAYLOAD" \
-        | curl --silent --show-error --max-time 60 \
-            -H 'Content-Type: application/json' \
-            --data-binary @- \
-            "$BROW_URL" 2>/dev/null) || RESPONSE=""
-
-    if [ -n "$RESPONSE" ]; then
-        printf '%s\n' "$RESPONSE"
-    fi
-    exit 0
-    """#
-
-    private static func writeHookScript() throws {
-        let path = hookScriptPath
-        let parent = (path as NSString).deletingLastPathComponent
-        let fm = FileManager.default
-        do {
-            try fm.createDirectory(atPath: parent, withIntermediateDirectories: true)
-            try hookScriptBody.write(toFile: path, atomically: true, encoding: .utf8)
-            // chmod 755 so Claude Code can exec it.
-            try fm.setAttributes([.posixPermissions: NSNumber(value: 0o755)], ofItemAtPath: path)
-        } catch {
-            throw InstallError.scriptWriteFailed(underlying: error)
-        }
+    /// Best-effort cleanup of the on-disk hook script written by Brow
+    /// builds prior to the inline-command switch. Quarantined or not, the
+    /// file is no longer referenced from settings.json once `install` has
+    /// run, so deleting it just keeps `~/.brow/hooks/` tidy. Failures are
+    /// silent — leftover orphan is harmless.
+    private static func removeLegacyHookScript() {
+        try? FileManager.default.removeItem(atPath: hookScriptPath)
     }
 
     // MARK: - settings.json mutations
@@ -202,25 +188,23 @@ enum ClaudeCodeHookInstaller {
     }
 
     /// Adds our hook entry under each covered hook name. Existing entries at
-    /// the same hook key are preserved.
+    /// the same hook key are preserved. Also sweeps legacy hook keys (e.g.
+    /// the old PreToolUse entry) so we never leave a stale Brow reference
+    /// behind after a hook-event migration.
     private static func attachOurHook(to settings: inout Settings) {
         var hooks = (settings["hooks"] as? Settings) ?? [:]
+
+        // 1. Strip any existing Brow reference, anywhere in the hooks dict.
+        sweepOurHook(from: &hooks)
+
+        // 2. Re-attach under the currently-covered hook names.
         for hookName in coveredHooks {
             var bucket = (hooks[hookName] as? [Any]) ?? []
-            bucket.removeAll { entry in
-                // Drop any pre-existing Brow entry so re-install doesn't
-                // duplicate. Detection is by matching command path.
-                if let dict = entry as? [String: Any],
-                   let inner = dict["hooks"] as? [[String: Any]] {
-                    return inner.contains { ($0["command"] as? String) == hookScriptPath }
-                }
-                return false
-            }
             bucket.append([
                 "matcher": "*",
                 "hooks": [[
                     "type": "command",
-                    "command": hookScriptPath
+                    "command": hookCommand
                 ]]
             ] as [String: Any])
             hooks[hookName] = bucket
@@ -228,27 +212,40 @@ enum ClaudeCodeHookInstaller {
         settings["hooks"] = hooks
     }
 
+    /// Identifies a hook entry as Brow's own — either the new inline curl
+    /// command, or the legacy on-disk script path written by older builds.
+    private static func isOurCommand(_ command: String) -> Bool {
+        command == hookCommand || command == hookScriptPath
+    }
+
     /// Removes only the hook entries whose nested `command` field matches
     /// our installed script path. Leaves everything else alone.
     private static func detachOurHook(from settings: inout Settings) {
         guard var hooks = settings["hooks"] as? Settings else { return }
-        for hookName in coveredHooks {
+        sweepOurHook(from: &hooks)
+        if hooks.isEmpty {
+            settings.removeValue(forKey: "hooks")
+        } else {
+            settings["hooks"] = hooks
+        }
+    }
+
+    /// Removes every entry whose nested `command` field matches Brow's
+    /// inline command or the legacy script path, across all hook event
+    /// keys. Empty buckets get pruned. Mutates in place.
+    private static func sweepOurHook(from hooks: inout Settings) {
+        for hookName in Array(hooks.keys) {
             guard var bucket = hooks[hookName] as? [Any] else { continue }
             bucket.removeAll { entry in
                 guard let dict = entry as? [String: Any],
                       let inner = dict["hooks"] as? [[String: Any]] else { return false }
-                return inner.contains { ($0["command"] as? String) == hookScriptPath }
+                return inner.contains { isOurCommand(($0["command"] as? String) ?? "") }
             }
             if bucket.isEmpty {
                 hooks.removeValue(forKey: hookName)
             } else {
                 hooks[hookName] = bucket
             }
-        }
-        if hooks.isEmpty {
-            settings.removeValue(forKey: "hooks")
-        } else {
-            settings["hooks"] = hooks
         }
     }
 
@@ -259,7 +256,7 @@ enum ClaudeCodeHookInstaller {
             for entry in bucket {
                 guard let dict = entry as? [String: Any],
                       let inner = dict["hooks"] as? [[String: Any]] else { continue }
-                if inner.contains(where: { ($0["command"] as? String) == hookScriptPath }) {
+                if inner.contains(where: { isOurCommand(($0["command"] as? String) ?? "") }) {
                     return true
                 }
             }
@@ -267,9 +264,9 @@ enum ClaudeCodeHookInstaller {
         return false
     }
 
-    /// Returns command paths of any *other* PreToolUse / Notification hooks
-    /// the user already has, so the Settings panel can surface "Masko is
-    /// also installed" / "an extra hook from <path> is active".
+    /// Returns command paths of any *other* PermissionRequest / Notification
+    /// hooks the user already has, so the Settings panel can surface "Masko
+    /// is also installed" / "an extra hook from <path> is active".
     private static func siblingCommandsAlongsideOurs(in settings: Settings) -> [String] {
         guard let hooks = settings["hooks"] as? Settings else { return [] }
         var siblings: Set<String> = []
@@ -279,7 +276,7 @@ enum ClaudeCodeHookInstaller {
                 guard let dict = entry as? [String: Any],
                       let inner = dict["hooks"] as? [[String: Any]] else { continue }
                 for hook in inner {
-                    if let command = hook["command"] as? String, command != hookScriptPath {
+                    if let command = hook["command"] as? String, !isOurCommand(command) {
                         siblings.insert(command)
                     }
                 }

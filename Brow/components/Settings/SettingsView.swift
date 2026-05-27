@@ -9,6 +9,7 @@ import AVFoundation
 import Defaults
 import EventKit
 import KeyboardShortcuts
+import UniformTypeIdentifiers
 import LaunchAtLogin
 import Sparkle
 import SwiftUI
@@ -133,12 +134,35 @@ struct SettingsView: View {
 }
 
 struct GeneralSettings: View {
-    @State private var screens: [(uuid: String, name: String)] = NSScreen.screens.compactMap { screen in
-        guard let uuid = screen.displayUUID else { return nil }
-        return (uuid, screen.localizedName)
+    struct ScreenInfo: Identifiable, Equatable {
+        let uuid: String
+        let name: String
+        let isMain: Bool
+        let resolution: String
+        let hasPhysicalNotch: Bool
+        var id: String { uuid }
     }
+
+    @State private var screens: [ScreenInfo] = GeneralSettings.snapshotScreens()
     @EnvironmentObject var vm: BrowViewModel
     @ObservedObject var coordinator = BrowViewCoordinator.shared
+
+    private static func snapshotScreens() -> [ScreenInfo] {
+        let mainUUID = NSScreen.main?.displayUUID
+        return NSScreen.screens.compactMap { screen -> ScreenInfo? in
+            guard let uuid = screen.displayUUID else { return nil }
+            let backing = screen.backingScaleFactor
+            let w = Int(screen.frame.width * backing)
+            let h = Int(screen.frame.height * backing)
+            return ScreenInfo(
+                uuid: uuid,
+                name: screen.localizedName,
+                isMain: uuid == mainUUID,
+                resolution: "\(w) × \(h)",
+                hasPhysicalNotch: screen.safeAreaInsets.top > 0
+            )
+        }
+    }
 
     @Default(.mirrorShape) var mirrorShape
     @Default(.showEmojis) var showEmojis
@@ -165,34 +189,10 @@ struct GeneralSettings: View {
                 }
                 .tint(.effectiveAccent)
                 LaunchAtLogin.Toggle("Launch at login")
-                Defaults.Toggle(key: .showOnAllDisplays) {
-                    Text("Show on all displays")
-                }
-                .onChange(of: showOnAllDisplays) {
-                    NotificationCenter.default.post(
-                        name: Notification.Name.showOnAllDisplaysChanged, object: nil)
-                }
-                Picker("Preferred display", selection: $coordinator.preferredScreenUUID) {
-                    ForEach(screens, id: \.uuid) { screen in
-                        Text(screen.name).tag(screen.uuid as String?)
+                screenSelectionView
+                    .onChange(of: NSScreen.screens) {
+                        screens = Self.snapshotScreens()
                     }
-                }
-                .onChange(of: NSScreen.screens) {
-                    screens = NSScreen.screens.compactMap { screen in
-                        guard let uuid = screen.displayUUID else { return nil }
-                        return (uuid, screen.localizedName)
-                    }
-                }
-                .disabled(showOnAllDisplays)
-                
-                Defaults.Toggle(key: .automaticallySwitchDisplay) {
-                    Text("Automatically switch displays")
-                }
-                    .onChange(of: automaticallySwitchDisplay) {
-                        NotificationCenter.default.post(
-                            name: Notification.Name.automaticallySwitchDisplayChanged, object: nil)
-                    }
-                    .disabled(showOnAllDisplays)
             } header: {
                 Text("System features")
             }
@@ -350,6 +350,113 @@ struct GeneralSettings: View {
         } header: {
             Text("Notch behavior")
         }
+    }
+
+    // MARK: - Screen selection
+
+    private var screenSelectionView: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Show notch on")
+                        .font(.system(size: 13, weight: .medium))
+                    Text("Pick which displays should render the notch. Selection is remembered across reconnects.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 12)
+                Menu {
+                    Button("Select all") {
+                        coordinator.enabledScreenUUIDs = Set(screens.map(\.uuid))
+                    }
+                    Button("Select none") {
+                        coordinator.enabledScreenUUIDs = []
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+            }
+
+            VStack(spacing: 0) {
+                ForEach(Array(screens.enumerated()), id: \.element.id) { idx, screen in
+                    screenRow(screen)
+                    if idx < screens.count - 1 {
+                        Divider().padding(.leading, 52)
+                    }
+                }
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color(NSColor.controlBackgroundColor))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func screenRow(_ screen: ScreenInfo) -> some View {
+        let enabled = coordinator.isScreenEnabled(screen.uuid)
+        Button {
+            coordinator.setScreenEnabled(screen.uuid, !enabled)
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(enabled ? Color.effectiveAccent.opacity(0.18) : Color.primary.opacity(0.06))
+                        .frame(width: 32, height: 32)
+                    Image(systemName: screen.hasPhysicalNotch ? "laptopcomputer" : "display")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(enabled ? Color.effectiveAccent : .secondary)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(screen.name)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                        if screen.isMain {
+                            Text("MAIN")
+                                .font(.system(size: 9, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 5).padding(.vertical, 1)
+                                .background(Capsule().fill(Color.effectiveAccent))
+                        }
+                    }
+                    Text(screen.resolution)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 0)
+
+                ZStack {
+                    Circle()
+                        .stroke(enabled ? Color.effectiveAccent : Color.primary.opacity(0.25), lineWidth: 1.5)
+                        .frame(width: 20, height: 20)
+                    if enabled {
+                        Circle()
+                            .fill(Color.effectiveAccent)
+                            .frame(width: 20, height: 20)
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                }
+                .animation(.easeInOut(duration: 0.15), value: enabled)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -1176,6 +1283,7 @@ struct Appearance: View {
     @Default(.useMusicVisualizer) var useMusicVisualizer
     @Default(.customVisualizers) var customVisualizers
     @Default(.selectedVisualizer) var selectedVisualizer
+    @Default(.selectedAIMascotVisualizer) var selectedAIMascotVisualizer
 
     let icons: [String] = ["brow-logo"]
     @State private var selectedIcon: String = "brow-logo"
@@ -1184,6 +1292,11 @@ struct Appearance: View {
     @State private var name: String = ""
     @State private var url: String = ""
     @State private var speed: CGFloat = 1.0
+    @State private var scale: CGFloat = 1.0
+    @State private var screens: [(uuid: String, name: String)] = NSScreen.screens.compactMap { s in
+        guard let uuid = s.displayUUID else { return nil }
+        return (uuid, s.localizedName)
+    }
     var body: some View {
         Form {
             Section {
@@ -1219,46 +1332,68 @@ struct Appearance: View {
                     "Use music visualizer spectrogram",
                     isOn: $useMusicVisualizer.animation()
                 )
-                .disabled(true)
                 if !useMusicVisualizer {
                     if customVisualizers.count > 0 {
                         Picker(
-                            "Selected animation",
-                            selection: $selectedVisualizer
+                            "Music animation",
+                            selection: Binding<CustomVisualizer?>(
+                                get: { selectedVisualizer ?? customVisualizers.first },
+                                set: { selectedVisualizer = $0 }
+                            )
                         ) {
-                            ForEach(
-                                customVisualizers,
-                                id: \.self
-                            ) { visualizer in
-                                Text(visualizer.name)
-                                    .tag(visualizer)
+                            ForEach(customVisualizers, id: \.self) { visualizer in
+                                Text(visualizer.name).tag(Optional(visualizer))
                             }
                         }
                     } else {
                         HStack {
-                            Text("Selected animation")
+                            Text("Music animation")
                             Spacer()
-                            Text("No custom animation available")
+                            Text("Add one below to use it")
                                 .foregroundStyle(.secondary)
                         }
                     }
                 }
-            } header: {
-                HStack {
-                    Text("Custom music live activity animation")
-                    customBadge(text: "Coming soon")
+
+                // AI mascot — second slot, picks from the same library as
+                // the music visualizer. "None" keeps the built-in SwiftUI
+                // mascot face.
+                Picker(
+                    "AI mascot",
+                    selection: Binding<CustomVisualizer?>(
+                        get: { selectedAIMascotVisualizer },
+                        set: { selectedAIMascotVisualizer = $0 }
+                    )
+                ) {
+                    Text("Built-in mascot").tag(CustomVisualizer?.none)
+                    ForEach(customVisualizers, id: \.self) { visualizer in
+                        Text(visualizer.name).tag(Optional(visualizer))
+                    }
                 }
+                .disabled(customVisualizers.isEmpty)
+            } header: {
+                Text("Custom animations")
+            } footer: {
+                Text("Animations live in the library below. Music animation plays while music is on and the notch is closed. AI mascot replaces the built-in face in the AI tab and approval bubble.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section {
                 List {
                     ForEach(customVisualizers, id: \.self) { visualizer in
                         HStack {
-                            LottieView(
-                                url: visualizer.url, speed: visualizer.speed,
-                                loopMode: .loop
-                            )
-                            .frame(width: 30, height: 30, alignment: .center)
+                            ZStack {
+                                LottieView(
+                                    url: visualizer.url, speed: visualizer.speed,
+                                    loopMode: .loop
+                                )
+                                .frame(width: 30, height: 30)
+                                .scaleEffect(min(visualizer.scale, 1.5), anchor: .center)
+                                .id("\(visualizer.UUID)-preview-\(visualizer.scale)")
+                            }
+                            .frame(width: 36, height: 36, alignment: .center)
+                            .clipped()
                             Text(visualizer.name)
                             Spacer(minLength: 0)
                             if selectedVisualizer == visualizer {
@@ -1284,6 +1419,10 @@ struct Appearance: View {
                                 return
                             }
                             selectedListVisualizer = visualizer
+                            // Also promote to "currently playing" so the
+                            // scale / speed sliders below actually affect
+                            // the notch render.
+                            selectedVisualizer = visualizer
                         }
                     }
                 }
@@ -1297,6 +1436,7 @@ struct Appearance: View {
                             name = ""
                             url = ""
                             speed = 1.0
+                            scale = 1.0
                             isPresented.toggle()
                         } label: {
                             Image(systemName: "plus")
@@ -1312,6 +1452,9 @@ struct Appearance: View {
                                     at: customVisualizers.firstIndex(of: visualizer)!)
                                 if visualizer == selectedVisualizer && customVisualizers.count > 0 {
                                     selectedVisualizer = customVisualizers[0]
+                                }
+                                if visualizer == selectedAIMascotVisualizer {
+                                    selectedAIMascotVisualizer = nil
                                 }
                             }
                         } label: {
@@ -1336,14 +1479,39 @@ struct Appearance: View {
                             .font(.largeTitle.bold())
                             .padding(.vertical)
                         TextField("Name", text: $name)
-                        TextField("Lottie JSON URL", text: $url)
-                        HStack {
-                            Text("Speed")
-                            Spacer(minLength: 80)
-                            Text("\(speed, specifier: "%.1f")s")
-                                .multilineTextAlignment(.trailing)
-                                .foregroundStyle(.secondary)
-                            Slider(value: $speed, in: 0...2, step: 0.1)
+                        HStack(spacing: 6) {
+                            TextField("Lottie JSON URL or local file path", text: $url)
+                            Button {
+                                if let imported = importLocalLottieFile() {
+                                    url = imported.url.absoluteString
+                                    if name.isEmpty { name = imported.suggestedName }
+                                }
+                            } label: {
+                                Label("Choose file", systemImage: "folder")
+                            }
+                            .controlSize(.large)
+                        }
+                        Text("Paste a remote URL, or click \"Choose file\" to import a local Lottie .json. Imported files are copied into Brow's library so they keep working even if you move or delete the original.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Text("Speed")
+                                Spacer(minLength: 80)
+                                Text("\(speed, specifier: "%.1f")×")
+                                    .multilineTextAlignment(.trailing)
+                                    .foregroundStyle(.secondary)
+                                Slider(value: $speed, in: 0.1...2, step: 0.1)
+                            }
+                            HStack {
+                                Text("Scale")
+                                Spacer(minLength: 80)
+                                Text(scalePercent(scale))
+                                    .multilineTextAlignment(.trailing)
+                                    .foregroundStyle(.secondary)
+                                Slider(value: $scale, in: 0.01...1.0, step: 0.01)
+                            }
                         }
                         .padding(.vertical)
                         HStack {
@@ -1355,11 +1523,15 @@ struct Appearance: View {
                             }
 
                             Button {
+                                guard let resolvedURL = URL(string: url) ?? URL(string: url.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? "") else {
+                                    return
+                                }
                                 let visualizer: CustomVisualizer = .init(
                                     UUID: UUID(),
                                     name: name,
-                                    url: URL(string: url)!,
-                                    speed: speed
+                                    url: resolvedURL,
+                                    speed: speed,
+                                    scale: scale
                                 )
 
                                 if !customVisualizers.contains(visualizer) {
@@ -1372,11 +1544,58 @@ struct Appearance: View {
                                     .frame(maxWidth: .infinity, alignment: .center)
                             }
                             .buttonStyle(BorderedProminentButtonStyle())
+                            .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty
+                                      || URL(string: url) == nil)
                         }
                     }
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .controlSize(.extraLarge)
                     .padding()
+                }
+
+                // Inline editor for the visualizer the user tapped on.
+                // One Speed slider + one Scale slider — the scale is a
+                // single global value, applied proportionally on every
+                // display.
+                if let selected = selectedListVisualizer,
+                   let idx = customVisualizers.firstIndex(of: selected) {
+                    VStack(spacing: 6) {
+                        HStack {
+                            Text("Speed")
+                            Spacer(minLength: 40)
+                            Text("\(customVisualizers[idx].speed, specifier: "%.1f")×")
+                                .foregroundStyle(.secondary)
+                            Slider(value: Binding(
+                                get: { customVisualizers[idx].speed },
+                                set: { newValue in
+                                    var updated = customVisualizers[idx]
+                                    updated.speed = newValue
+                                    customVisualizers[idx] = updated
+                                    if selectedVisualizer == selected { selectedVisualizer = updated }
+                                    if selectedAIMascotVisualizer == selected { selectedAIMascotVisualizer = updated }
+                                    selectedListVisualizer = updated
+                                }
+                            ), in: 0.1...2, step: 0.1)
+                        }
+                        HStack {
+                            Text("Scale")
+                            Spacer(minLength: 40)
+                            Text(scalePercent(customVisualizers[idx].scale))
+                                .foregroundStyle(.secondary)
+                            Slider(value: Binding(
+                                get: { customVisualizers[idx].scale },
+                                set: { newValue in
+                                    var updated = customVisualizers[idx]
+                                    updated.scale = newValue
+                                    customVisualizers[idx] = updated
+                                    if selectedVisualizer == selected { selectedVisualizer = updated }
+                                    if selectedAIMascotVisualizer == selected { selectedAIMascotVisualizer = updated }
+                                    selectedListVisualizer = updated
+                                }
+                            ), in: 0.01...1.0, step: 0.01)
+                        }
+                    }
+                    .controlSize(.small)
                 }
             } header: {
                 HStack(spacing: 0) {
@@ -1385,6 +1604,12 @@ struct Appearance: View {
                         Text(" – \(Defaults[.customVisualizers].count)")
                             .foregroundStyle(.secondary)
                     }
+                }
+            } footer: {
+                if selectedListVisualizer != nil {
+                    Text("Tap a visualizer to tweak its speed and scale. Tap again to deselect.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -1418,6 +1643,62 @@ struct Appearance: View {
         }
 
         return false
+    }
+
+    /// Compact scale label — 1% steps need decimals at the low end to
+    /// avoid showing "0%" for visible values.
+    private func scalePercent(_ s: CGFloat) -> String {
+        if s < 0.1 {
+            return String(format: "%.1f%%", s * 100)
+        }
+        return "\(Int((s * 100).rounded()))%"
+    }
+
+    // MARK: - Local Lottie import
+
+    struct ImportedLottie {
+        let url: URL
+        let suggestedName: String
+    }
+
+    /// Lets the user pick a local Lottie `.json` and copies it into Brow's
+    /// Application Support directory. We hand back the copy's URL so the
+    /// visualizer keeps working even after the user moves or deletes the
+    /// original file.
+    func importLocalLottieFile() -> ImportedLottie? {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.title = "Choose Lottie JSON"
+        panel.prompt = "Import"
+        if let jsonType = UTType(filenameExtension: "json") {
+            panel.allowedContentTypes = [jsonType]
+        }
+
+        guard panel.runModal() == .OK, let source = panel.url else { return nil }
+
+        let fm = FileManager.default
+        guard let appSupport = fm.urls(for: .applicationSupportDirectory,
+                                       in: .userDomainMask).first else { return nil }
+        let libraryDir = appSupport
+            .appendingPathComponent("Brow", isDirectory: true)
+            .appendingPathComponent("Visualizers", isDirectory: true)
+        try? fm.createDirectory(at: libraryDir, withIntermediateDirectories: true)
+
+        // Prefix with a UUID so two imports of the same filename don't clash.
+        let dest = libraryDir.appendingPathComponent("\(UUID().uuidString)-\(source.lastPathComponent)")
+
+        do {
+            try fm.copyItem(at: source, to: dest)
+            return ImportedLottie(
+                url: dest,
+                suggestedName: source.deletingPathExtension().lastPathComponent
+            )
+        } catch {
+            NSLog("Failed to import Lottie file: \(error.localizedDescription)")
+            return nil
+        }
     }
 }
 
@@ -1737,6 +2018,16 @@ struct AccentCircleButton: View {
 struct Shortcuts: View {
     var body: some View {
         Form {
+            Section {
+                KeyboardShortcuts.Recorder("Allow:", name: .aiApprovalAllow)
+                KeyboardShortcuts.Recorder("Allow always / with suggestion:", name: .aiApprovalAllowAlways)
+                KeyboardShortcuts.Recorder("Deny:", name: .aiApprovalDeny)
+            } header: {
+                Text("AI approval")
+            } footer: {
+                Text("Acts on the head of the pending Claude Code queue. No-op when nothing is waiting.")
+                    .font(.caption)
+            }
             Section {
                 KeyboardShortcuts.Recorder("Toggle Sneak Peek:", name: .toggleSneakPeek)
             } header: {

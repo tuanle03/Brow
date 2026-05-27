@@ -1,209 +1,178 @@
 import SwiftUI
 
-/// The "AI" tab inside the expanded notch (PR #6 of the AI Sessions feature).
-/// Mirrors the design previewed in the wireframe: a Sessions list (one row
-/// per active Claude Code session, mascot reflects status) and a Pending
-/// list (one row per queued PreToolUse, with Allow / Always / Deny actions).
-///
-/// Both lists drive directly off `ClaudeCodeStore`, so anything the sneak
-/// peek does also updates the tab in sync.
+/// The "AI" tab inside the expanded notch. Single-purpose layout: when
+/// Claude Code is waiting on the user, we surface only the prompt — tool
+/// info + path + Allow / Suggestion / Deny buttons. No sessions list, no
+/// recent log, no extra chrome. When nothing is waiting we show a small
+/// idle state.
 struct AISessionsTabView: View {
     @ObservedObject private var store = ClaudeCodeStore.shared
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(icon: "rectangle.stack.fill",
-                          title: "Sessions",
-                          count: store.sessions.count,
-                          accent: .cyan)
-            if store.sessions.isEmpty {
-                emptyState("No Claude Code sessions are running.")
+        Group {
+            if let current = store.pending.first {
+                approvalCard(current,
+                             queueIndex: 1,
+                             queueTotal: store.pending.count)
+                    .id(current.id)
+                    .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .center)))
+            } else if let toast = store.transientNotification {
+                notificationCard(toast)
+                    .id(toast.id)
+                    .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .center)))
             } else {
-                VStack(spacing: 4) {
-                    ForEach(orderedSessions, id: \.id) { sessionRow($0) }
-                }
+                idleState
             }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .animation(.smooth(duration: 0.25), value: store.pending.first?.id)
+        .animation(.smooth(duration: 0.25), value: store.transientNotification?.id)
+    }
 
-            sectionHeader(icon: "list.bullet.indent",
-                          title: "Pending",
-                          count: store.pending.count,
-                          accent: .pink)
-            if store.pending.isEmpty {
-                emptyState("Nothing waiting for approval.")
-            } else {
-                VStack(spacing: 4) {
-                    ForEach(Array(store.pending.enumerated()), id: \.element.id) { idx, a in
-                        pendingRow(index: idx + 1, approval: a)
+    // MARK: - Approval bubble (vertical layout, no truncation)
+
+    @ViewBuilder
+    private func approvalCard(_ approval: PendingApproval,
+                              queueIndex: Int,
+                              queueTotal: Int) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                BrowMascot(state: .attention, size: 36)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Image(systemName: icon(for: approval.toolName))
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(accent(for: approval.toolName))
+                        Text(approval.toolName)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.white)
+                        if let session = approval.sessionID {
+                            Text("·").foregroundStyle(.white.opacity(0.35))
+                            Text(String(session.prefix(6)))
+                                .font(.system(size: 10, design: .monospaced))
+                                .foregroundStyle(.white.opacity(0.5))
+                        }
                     }
+                    Text(approval.targetDescription)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.9))
+                        .lineLimit(3)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                if queueTotal > 1 {
+                    Text("\(queueIndex)/\(queueTotal)")
+                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.6))
+                        .padding(.horizontal, 6).padding(.vertical, 3)
+                        .background(Capsule().fill(.white.opacity(0.1)))
                 }
             }
 
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 12)
-        .padding(.top, 8)
-        .padding(.bottom, 12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var orderedSessions: [SessionState] {
-        store.sessions.values.sorted { $0.lastEventAt > $1.lastEventAt }
-    }
-
-    // MARK: - Section header
-
-    @ViewBuilder
-    private func sectionHeader(icon: String, title: String, count: Int, accent: Color) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(accent)
-            Text(title)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.85))
-            Text("\(count)")
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.5))
-                .padding(.horizontal, 5).padding(.vertical, 1)
-                .background(Capsule().fill(.white.opacity(0.08)))
-        }
-    }
-
-    @ViewBuilder
-    private func emptyState(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 10))
-            .foregroundStyle(.white.opacity(0.4))
-            .padding(.leading, 4)
-    }
-
-    // MARK: - Rows
-
-    @ViewBuilder
-    private func sessionRow(_ session: SessionState) -> some View {
-        HStack(spacing: 8) {
-            BrowMascot(state: mascotState(for: session), size: 22)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(displayName(for: session))
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                if let lastTool = session.lastTool {
-                    Text("last: \(lastTool)")
-                        .font(.system(size: 9, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.45))
-                }
-            }
-            Spacer(minLength: 0)
-            statusPill(for: session)
-        }
-        .padding(.horizontal, 8).padding(.vertical, 5)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(.white.opacity(0.04))
-        )
-    }
-
-    @ViewBuilder
-    private func pendingRow(index: Int, approval: PendingApproval) -> some View {
-        HStack(spacing: 8) {
-            Text("\(index)")
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.45))
-                .frame(width: 14, alignment: .trailing)
-            Image(systemName: icon(for: approval.toolName))
-                .font(.system(size: 10))
-                .foregroundStyle(accent(for: approval.toolName))
-                .frame(width: 14)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(approval.toolName)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white)
-                Text(approval.targetDescription)
-                    .font(.system(size: 9, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.55))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-            Spacer(minLength: 0)
-            HStack(spacing: 3) {
-                quickButton("checkmark",        tint: .green, help: "Allow") {
+            HStack(spacing: 6) {
+                actionButton("Allow", "⌘↵", .green, prominent: true) {
                     store.decide(approval.id, as: .allow)
                 }
-                quickButton("checkmark.circle", tint: .cyan,  help: "Always allow") {
-                    store.decide(approval.id, as: .allowAlways)
+                ForEach(Array(approval.suggestions.enumerated()), id: \.element.id) { index, suggestion in
+                    let shortcut = index == 0 ? "⌘⇧↵" : nil
+                    actionButton(suggestion.displayLabel, shortcut, .cyan, prominent: false) {
+                        store.decide(approval.id, as: .allowWith(suggestion))
+                    }
                 }
-                quickButton("xmark",            tint: .red,   help: "Deny") {
+                actionButton("Deny", "⌘⎋", .red, prominent: false) {
                     store.decide(approval.id, as: .deny)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .center)
         }
-        .padding(.horizontal, 8).padding(.vertical, 5)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(.white.opacity(0.04))
-        )
     }
 
+    // MARK: - Notification bubble
+
     @ViewBuilder
-    private func quickButton(_ icon: String,
-                             tint: Color,
-                             help: String,
-                             action: @escaping () -> Void) -> some View {
+    private func notificationCard(_ toast: TransientNotification) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            BrowMascot(state: toast.kind == .stopped ? .approved : .attention, size: 32)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(toast.title)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.7))
+                Text(toast.body)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.white)
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button {
+                store.dismissTransientNotification()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.6))
+                    .padding(8)
+                    .background(Circle().fill(.white.opacity(0.08)))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: - Idle state
+
+    @ViewBuilder
+    private var idleState: some View {
+        HStack(spacing: 10) {
+            BrowMascot(state: .idle, size: 28)
+            Text("Nothing waiting.")
+                .font(.system(size: 12))
+                .foregroundStyle(.white.opacity(0.5))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+    }
+
+    // MARK: - Buttons
+
+    @ViewBuilder
+    private func actionButton(_ label: String,
+                              _ shortcut: String?,
+                              _ tint: Color,
+                              prominent: Bool,
+                              action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: 9, weight: .bold))
-                .foregroundStyle(tint)
-                .frame(width: 20, height: 20)
-                .background(
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .fill(tint.opacity(0.18))
-                )
+            HStack(spacing: 5) {
+                Text(label)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(prominent ? .black : .white)
+                    .lineLimit(1)
+                if let shortcut {
+                    Text(shortcut)
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundStyle(prominent ? .black.opacity(0.55) : .white.opacity(0.5))
+                }
+            }
+            .fixedSize(horizontal: true, vertical: false)
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(prominent ? tint : tint.opacity(0.18))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(tint.opacity(prominent ? 0 : 0.45), lineWidth: 0.8)
+            )
         }
         .buttonStyle(.plain)
-        .help(help)
     }
 
-    @ViewBuilder
-    private func statusPill(for session: SessionState) -> some View {
-        let pendingForSession = store.pending.contains { $0.sessionID == session.id }
-        let age = Date().timeIntervalSince(session.lastEventAt)
-        if pendingForSession {
-            pill("waiting", .pink)
-        } else if age < 30 {
-            pill("working", .cyan)
-        } else {
-            pill("idle " + formatIdle(age), .gray)
-        }
-    }
-
-    @ViewBuilder
-    private func pill(_ text: String, _ color: Color) -> some View {
-        Text(text)
-            .font(.system(size: 9, weight: .semibold))
-            .foregroundStyle(color)
-            .padding(.horizontal, 6).padding(.vertical, 2)
-            .background(Capsule().fill(color.opacity(0.18)))
-    }
-
-    // MARK: - Helpers
-
-    private func mascotState(for session: SessionState) -> BrowMascot.MascotState {
-        let pendingForSession = store.pending.contains { $0.sessionID == session.id }
-        let age = Date().timeIntervalSince(session.lastEventAt)
-        if pendingForSession { return .attention }
-        if age < 30 { return .working }
-        return .idle
-    }
-
-    private func displayName(for session: SessionState) -> String {
-        if let dir = session.projectDirectory,
-           let last = dir.split(separator: "/").last {
-            return String(last)
-        }
-        return String(session.id.prefix(8))
-    }
+    // MARK: - Per-tool styling
 
     private func icon(for toolName: String) -> String {
         switch toolName {
@@ -224,17 +193,11 @@ struct AISessionsTabView: View {
         default:      return .gray
         }
     }
-
-    private func formatIdle(_ s: TimeInterval) -> String {
-        if s < 60 { return "\(Int(s))s" }
-        if s < 3600 { return "\(Int(s / 60))m" }
-        return "\(Int(s / 3600))h"
-    }
 }
 
 #Preview {
     AISessionsTabView()
-        .frame(width: 460, height: 360)
+        .frame(width: 460, height: 200)
         .padding(28)
         .background(Color.black)
 }

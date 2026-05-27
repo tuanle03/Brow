@@ -118,29 +118,31 @@ struct AISettingsView: View {
                     }
                     refreshInstallState()
                 }
-                .disabled(!isInstalledOrOrphaned)
+                .disabled(!isInstalled)
 
                 Spacer()
 
                 Button("Refresh") { refreshInstallState() }
             }
 
-            DisclosureGroup("Paths") {
-                LabeledContent("Hook script") {
-                    Text(ClaudeCodeHookInstaller.hookScriptPath)
-                        .font(.caption.monospaced())
-                        .textSelection(.enabled)
-                }
+            DisclosureGroup("Details") {
                 LabeledContent("Claude settings") {
                     Text(ClaudeCodeHookInstaller.claudeSettingsPath)
                         .font(.caption.monospaced())
                         .textSelection(.enabled)
                 }
+                LabeledContent("Hook command") {
+                    Text(ClaudeCodeHookInstaller.hookCommand)
+                        .font(.caption.monospaced())
+                        .textSelection(.enabled)
+                        .lineLimit(3)
+                        .truncationMode(.middle)
+                }
             }
         } header: {
             Text("Claude Code hooks")
         } footer: {
-            Text("Installing writes ~/.brow/hooks/brow-claude-hook and adds a PreToolUse + Notification entry to ~/.claude/settings.json. Uninstall removes only Brow's entries — your other hooks are left untouched.")
+            Text("Installing adds a PermissionRequest + Notification entry to ~/.claude/settings.json that pipes hook payloads into the local Brow bridge over loopback. Uninstall removes only Brow's entries — your other hooks are left untouched.")
         }
     }
 
@@ -148,7 +150,6 @@ struct AISettingsView: View {
         switch installState {
         case .installed:                return "checkmark.seal.fill"
         case .installedWithSiblings:    return "checkmark.seal"
-        case .scriptOrphaned:           return "exclamationmark.triangle.fill"
         case .notInstalled:             return "circle"
         }
     }
@@ -157,7 +158,6 @@ struct AISettingsView: View {
         switch installState {
         case .installed:                return .green
         case .installedWithSiblings:    return .yellow
-        case .scriptOrphaned:           return .orange
         case .notInstalled:             return .secondary
         }
     }
@@ -166,27 +166,22 @@ struct AISettingsView: View {
         switch installState {
         case .installed:                return "Hooks installed"
         case .installedWithSiblings:    return "Hooks installed (with siblings)"
-        case .scriptOrphaned:           return "Hook script present, but settings.json doesn't reference it"
         case .notInstalled:             return "Hooks not installed"
         }
     }
 
     private var installButtonLabel: String {
         switch installState {
-        case .notInstalled, .scriptOrphaned: return "Install Hooks"
-        default: return "Reinstall"
+        case .notInstalled:             return "Install Hooks"
+        default:                        return "Reinstall"
         }
     }
 
     private var isInstalled: Bool {
         switch installState {
         case .installed, .installedWithSiblings: return true
-        default: return false
+        case .notInstalled: return false
         }
-    }
-
-    private var isInstalledOrOrphaned: Bool {
-        installState != .notInstalled
     }
 
     private func refreshInstallState() {
@@ -207,6 +202,21 @@ struct AISettingsView: View {
                 }
             }
 
+            if !store.recentlyResolved.isEmpty {
+                Divider()
+                HStack {
+                    Text("Recent")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Clear") { store.clearRecentlyResolved() }
+                        .controlSize(.small)
+                }
+                ForEach(store.recentlyResolved) { resolved in
+                    resolvedRow(resolved)
+                }
+            }
+
             HStack(spacing: 8) {
                 Button("Allow head") { store.decideHead(as: .allow) }
                     .disabled(store.pending.isEmpty)
@@ -222,7 +232,28 @@ struct AISettingsView: View {
         } header: {
             Text("Pending approvals")
         } footer: {
-            Text("Each PreToolUse from Claude Code blocks here until you decide (max ~55s before Brow auto-falls back to \"ask\"). The notch surface lands in a follow-up PR — for now use the buttons above to resolve the head of the queue manually.")
+            Text("Each PermissionRequest from Claude Code blocks here until you decide (max ~55s before Brow falls back to Claude Code's own dialog). Resolved or timed-out requests are kept under Recent so you can review prompts you missed.")
+        }
+    }
+
+    @ViewBuilder
+    private func resolvedRow(_ resolved: ResolvedApproval) -> some View {
+        let a = resolved.approval
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Circle().fill(resolved.statusTint).frame(width: 6, height: 6)
+            Text(a.toolName)
+                .font(.callout.weight(.medium))
+            Text(a.targetDescription)
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .lineLimit(1).truncationMode(.middle)
+            Spacer()
+            Text(resolved.statusLabel)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(resolved.statusTint)
+            Text(resolved.resolvedAt, style: .relative)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
     }
 

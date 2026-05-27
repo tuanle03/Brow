@@ -52,6 +52,16 @@ class BrowViewCoordinator: ObservableObject {
 
     @Published var currentView: NotchViews = .home
     @Published var helloAnimationRunning: Bool = false
+
+    /// Set while a Claude Code event (pending approval or transient toast)
+    /// is driving the notch open by itself. Used so we can collapse it back
+    /// — and restore the tab the user was on — once the queue empties.
+    /// These two live on the singleton because they describe *global* UI
+    /// state (selected tab is shared across screens). The per-screen
+    /// "was the notch already open?" memo lives on each `ContentView` so
+    /// every screen can independently decide whether to close itself.
+    @Published var aiAutoExpanded: Bool = false
+    @Published var viewBeforeAIAutoExpansion: NotchViews?
     private var sneakPeekDispatch: DispatchWorkItem?
     private var expandingViewDispatch: DispatchWorkItem?
     private var hudEnableTask: Task<Void, Never>?
@@ -97,6 +107,20 @@ class BrowViewCoordinator: ObservableObject {
 
     @Published var selectedScreenUUID: String = NSScreen.main?.displayUUID ?? ""
 
+    /// The set of display UUIDs the user wants the notch to render on.
+    /// Persisted to UserDefaults so disconnecting and reconnecting a
+    /// monitor remembers the previous selection. Empty set = no notch
+    /// anywhere (a deliberate user choice).
+    @Published var enabledScreenUUIDs: Set<String> = [] {
+        didSet {
+            guard oldValue != enabledScreenUUIDs else { return }
+            persistEnabledScreens()
+            NotificationCenter.default.post(name: Notification.Name.selectedScreenChanged, object: nil)
+        }
+    }
+
+    private static let enabledScreensKey = "enabled_screen_uuids"
+
     @Published var optionKeyPressed: Bool = true
     private var accessibilityObserver: Any?
     private var hudReplacementCancellable: AnyCancellable?
@@ -122,6 +146,30 @@ class BrowViewCoordinator: ObservableObject {
         }
         
         selectedScreenUUID = preferredScreenUUID ?? NSScreen.main?.displayUUID ?? ""
+
+        // Load enabled-screens subset, or migrate from the legacy
+        // `showOnAllDisplays` + `preferredScreenUUID` settings on first
+        // run after the multi-select feature ships.
+        if let data = UserDefaults.standard.data(forKey: Self.enabledScreensKey),
+           let stored = try? JSONDecoder().decode(Set<String>.self, from: data) {
+            enabledScreenUUIDs = stored
+        } else {
+            let migrated: Set<String>
+            if Defaults[.showOnAllDisplays] {
+                migrated = Set(NSScreen.screens.compactMap { $0.displayUUID })
+            } else if let preferred = preferredScreenUUID {
+                migrated = [preferred]
+            } else if let main = NSScreen.main?.displayUUID {
+                migrated = [main]
+            } else {
+                migrated = []
+            }
+            enabledScreenUUIDs = migrated
+            // didSet doesn't reliably fire from init() — persist by hand.
+            if let data = try? JSONEncoder().encode(migrated) {
+                UserDefaults.standard.set(data, forKey: Self.enabledScreensKey)
+            }
+        }
         // Observe changes to accessibility authorization and react accordingly
         accessibilityObserver = NotificationCenter.default.addObserver(
             forName: Notification.Name.accessibilityAuthorizationChanged,
@@ -296,5 +344,25 @@ class BrowViewCoordinator: ObservableObject {
     
     func showEmpty() {
         currentView = .home
+    }
+
+    // MARK: - Enabled screens
+
+    private func persistEnabledScreens() {
+        if let data = try? JSONEncoder().encode(enabledScreenUUIDs) {
+            UserDefaults.standard.set(data, forKey: Self.enabledScreensKey)
+        }
+    }
+
+    /// Toggle a single screen on/off in the user's notch selection.
+    func setScreenEnabled(_ uuid: String, _ enabled: Bool) {
+        var s = enabledScreenUUIDs
+        if enabled { s.insert(uuid) } else { s.remove(uuid) }
+        enabledScreenUUIDs = s
+    }
+
+    /// True if the user wants the notch on this display.
+    func isScreenEnabled(_ uuid: String) -> Bool {
+        enabledScreenUUIDs.contains(uuid)
     }
 }

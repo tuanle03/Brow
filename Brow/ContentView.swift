@@ -23,9 +23,17 @@ struct ContentView: View {
     @ObservedObject var batteryModel = BatteryStatusViewModel.shared
     @ObservedObject var brightnessManager = BrightnessManager.shared
     @ObservedObject var volumeManager = VolumeManager.shared
+    @ObservedObject private var claudeStore = ClaudeCodeStore.shared
     @State private var hoverTask: Task<Void, Never>?
     @State private var isHovering: Bool = false
     @State private var anyDropDebounceTask: Task<Void, Never>?
+    /// Per-screen memo: was *this* screen's notch already open when AI
+    /// auto-expansion kicked in? Each screen tracks this independently so
+    /// every screen can decide for itself whether to close on collapse —
+    /// the global `coordinator.aiAutoExpanded` flag would otherwise be
+    /// cleared by whichever screen fires onChange first, leaving the
+    /// others stuck open.
+    @State private var notchWasOpenBeforeAI: Bool = false
 
     @State private var gestureProgress: CGFloat = .zero
 
@@ -102,6 +110,17 @@ struct ContentView: View {
                     .padding([.horizontal, .bottom], vm.notchState == .open ? 12 : 0)
                     .background(.black)
                     .clipShape(currentNotchShape)
+                    .overlay {
+                        // Animated rainbow halo — only while Claude Code
+                        // is waiting on the user AND the notch is open.
+                        // No border in closed state, no border once the
+                        // queue is empty.
+                        if claudeStore.shouldAutoExpand && vm.notchState == .open {
+                            rainbowNotchHalo
+                                .allowsHitTesting(false)
+                                .transition(.opacity)
+                        }
+                    }
                     .overlay(alignment: .top) {
                         Rectangle()
                             .fill(.black)
@@ -204,14 +223,6 @@ struct ContentView: View {
         }
         .padding(.bottom, 8)
         .frame(maxWidth: windowSize.width, maxHeight: windowSize.height, alignment: .top)
-        .overlay(alignment: .top) {
-            // AI Sessions sneak peek — appears just below the notch when
-            // Claude Code is blocking on the user. PR #5 of the AI feature.
-            BrowApprovalSneakPeek()
-                .padding(.top, vm.effectiveClosedNotchHeight + 8)
-                .allowsHitTesting(true)
-                .animation(.spring(response: 0.4, dampingFraction: 0.78), value: ClaudeCodeStore.shared.pending.count)
-        }
         .compositingGroup()
         .scaleEffect(
             x: gestureScale,
@@ -222,6 +233,9 @@ struct ContentView: View {
         .background(dragDetector)
         .preferredColorScheme(.dark)
         .environmentObject(vm)
+        .onChange(of: claudeStore.shouldAutoExpand) { _, shouldExpand in
+            handleAIAutoExpansionChange(shouldExpand)
+        }
         .onChange(of: vm.anyDropZoneTargeting) { _, isTargeted in
             anyDropDebounceTask?.cancel()
 
@@ -515,6 +529,105 @@ struct ContentView: View {
     private func doOpen() {
         withAnimation(animationSpring) {
             vm.open()
+        }
+    }
+
+    // MARK: - Rainbow halo
+
+    /// Same corner radii as `currentNotchShape` but as an open path —
+    /// only the two concave shoulders + the bottom U, no top edge.
+    private var currentNotchBottomBorder: NotchBottomBorder {
+        NotchBottomBorder(
+            topCornerRadius: topCornerRadius,
+            bottomCornerRadius: ((vm.notchState == .open) && Defaults[.cornerRadiusScaling])
+                ? cornerRadiusInsets.opened.bottom
+                : cornerRadiusInsets.closed.bottom
+        )
+    }
+
+    /// Animated angular-gradient stroke that runs along the notch's
+    /// visible outline (3 corners + bottom edge) whenever Claude Code is
+    /// waiting on the user. Uses `TimelineView` so it ticks every
+    /// animation frame without driving us through `@State`.
+    @ViewBuilder
+    private var rainbowNotchHalo: some View {
+        TimelineView(.animation) { context in
+            // 4-second loop. truncatingRemainder gives us a 0..<4 sawtooth
+            // that we map onto a full 360° rotation of the gradient.
+            let t = context.date.timeIntervalSinceReferenceDate
+            let angle = Angle.degrees((t.truncatingRemainder(dividingBy: 4) / 4) * 360)
+            let gradient = AngularGradient(
+                gradient: Gradient(colors: [
+                    .red, .orange, .yellow, .green, .cyan, .blue, .purple, .pink, .red
+                ]),
+                center: .center,
+                angle: angle
+            )
+            ZStack {
+                // Outer soft glow.
+                currentNotchBottomBorder
+                    .stroke(gradient, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                    .blur(radius: 5)
+                    .opacity(0.75)
+                // Sharp inner stroke.
+                currentNotchBottomBorder
+                    .stroke(gradient, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
+                    .opacity(0.95)
+            }
+        }
+    }
+
+    // MARK: - Claude Code auto-expansion
+
+    /// Drives the notch open / closed in response to Claude Code activity.
+    /// Multi-screen safe: every screen runs this independently and acts on
+    /// *its own* `vm`. Global UI state (saved tab, the `aiAutoExpanded`
+    /// flag) lives on the singleton coordinator — whichever screen sees
+    /// the transition first does the global cleanup; subsequent screens
+    /// observe the now-cleared global state but still close their own
+    /// notch via the per-screen `notchWasOpenBeforeAI` memo.
+    private func handleAIAutoExpansionChange(_ shouldExpand: Bool) {
+        if shouldExpand {
+            // Per-screen memo before any state mutation.
+            notchWasOpenBeforeAI = (vm.notchState == .open)
+
+            // Global save — first screen wins, the rest are no-ops.
+            if !coordinator.aiAutoExpanded {
+                coordinator.viewBeforeAIAutoExpansion = coordinator.currentView
+                coordinator.aiAutoExpanded = true
+            }
+            withAnimation(.smooth) {
+                coordinator.currentView = .ai
+            }
+            if vm.notchState == .closed {
+                doOpen()
+            }
+        } else {
+            // Per-screen close — runs on every screen regardless of who
+            // cleared the global flag. Critically, this is independent
+            // of `coordinator.currentView` because the first screen will
+            // mutate that to the restore-tab before the others observe
+            // the change — checking `currentView == .ai` here would race
+            // and leave the remaining screens stuck open.
+            if !notchWasOpenBeforeAI && vm.notchState == .open {
+                withAnimation(animationSpring) {
+                    vm.close()
+                }
+            }
+            notchWasOpenBeforeAI = false
+
+            // Global cleanup — first screen wins, the rest see the flag
+            // already cleared and skip.
+            if coordinator.aiAutoExpanded {
+                let restoreTo = coordinator.viewBeforeAIAutoExpansion ?? .home
+                coordinator.aiAutoExpanded = false
+                coordinator.viewBeforeAIAutoExpansion = nil
+                if coordinator.currentView == .ai {
+                    withAnimation(.smooth) {
+                        coordinator.currentView = restoreTo
+                    }
+                }
+            }
         }
     }
 

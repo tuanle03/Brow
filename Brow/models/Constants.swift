@@ -23,6 +23,41 @@ struct CustomVisualizer: Codable, Hashable, Equatable, Defaults.Serializable {
     var name: String
     var url: URL
     var speed: CGFloat = 1.0
+    /// Single global visual scale. Applied as a SwiftUI `scaleEffect` on
+    /// top of the aspect-fit Lottie render — multiplies the natural
+    /// in-notch size, so the same value gives proportionally-equivalent
+    /// results on every display.
+    var scale: CGFloat = 1.0
+
+    private enum CodingKeys: String, CodingKey {
+        case UUID, name, url, speed, scale
+    }
+
+    init(UUID: UUID, name: String, url: URL, speed: CGFloat = 1.0, scale: CGFloat = 1.0) {
+        self.UUID = UUID
+        self.name = name
+        self.url = url
+        self.speed = speed
+        self.scale = scale
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        UUID = try c.decode(Foundation.UUID.self, forKey: .UUID)
+        name = try c.decode(String.self, forKey: .name)
+        url = try c.decode(URL.self, forKey: .url)
+        speed = try c.decodeIfPresent(CGFloat.self, forKey: .speed) ?? 1.0
+        scale = try c.decodeIfPresent(CGFloat.self, forKey: .scale) ?? 1.0
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(UUID, forKey: .UUID)
+        try c.encode(name, forKey: .name)
+        try c.encode(url, forKey: .url)
+        try c.encode(speed, forKey: .speed)
+        try c.encode(scale, forKey: .scale)
+    }
 }
 
 enum CalendarSelectionState: Codable, Defaults.Serializable {
@@ -116,6 +151,10 @@ extension Defaults.Keys {
     static let useMusicVisualizer = Key<Bool>("useMusicVisualizer", default: true)
     static let customVisualizers = Key<[CustomVisualizer]>("customVisualizers", default: [])
     static let selectedVisualizer = Key<CustomVisualizer?>("selectedVisualizer", default: nil)
+    /// Optional Lottie animation that replaces the built-in SwiftUI
+    /// `BrowMascot` in the AI sessions tab + approval bubbles. Picks from
+    /// the same `customVisualizers` library as the music visualizer.
+    static let selectedAIMascotVisualizer = Key<CustomVisualizer?>("selectedAIMascotVisualizer", default: nil)
     
     // MARK: Gestures
     static let enableGestures = Key<Bool>("enableGestures", default: true)

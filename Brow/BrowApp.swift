@@ -149,16 +149,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func cleanupWindows(shouldInvert: Bool = false) {
-        let shouldCleanupMulti = shouldInvert ? !Defaults[.showOnAllDisplays] : Defaults[.showOnAllDisplays]
-        
-        if shouldCleanupMulti {
-            windows.values.forEach { window in
-                window.close()
-                NotchSpaceManager.shared.notchSpace.windows.remove(window)
-            }
-            windows.removeAll()
-            viewModels.removeAll()
-        } else if let window = window {
+        // Subset mode is multi-window only; clear all per-screen windows
+        // plus any lingering single-window leftover from older builds.
+        windows.values.forEach { window in
+            window.close()
+            NotchSpaceManager.shared.notchSpace.windows.remove(window)
+        }
+        windows.removeAll()
+        viewModels.removeAll()
+
+        if let window = window {
             window.close()
             NotchSpaceManager.shared.notchSpace.windows.remove(window)
             if let obs = windowScreenDidChangeObserver {
@@ -181,18 +181,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         guard Defaults[.expandedDragDetection] else { return }
 
-        if Defaults[.showOnAllDisplays] {
-            for screen in NSScreen.screens {
-                setupDragDetectorForScreen(screen)
-            }
-        } else {
-            let preferredScreen: NSScreen? = window?.screen
-                ?? NSScreen.screen(withUUID: coordinator.selectedScreenUUID)
-                ?? NSScreen.main
-
-            if let screen = preferredScreen {
-                setupDragDetectorForScreen(screen)
-            }
+        // Mirror the window selection: drag detectors only on the screens
+        // the user has enabled.
+        let availableUUIDs = Set(NSScreen.screens.compactMap { $0.displayUUID })
+        let targetUUIDs = coordinator.enabledScreenUUIDs.intersection(availableUUIDs)
+        for screen in NSScreen.screens {
+            guard let uuid = screen.displayUUID, targetUUIDs.contains(uuid) else { continue }
+            setupDragDetectorForScreen(screen)
         }
     }
 
@@ -313,9 +308,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NotificationCenter.default.addObserver(
             forName: Notification.Name.automaticallySwitchDisplayChanged, object: nil, queue: nil
         ) { [weak self] _ in
-            guard let self = self, let window = self.window else { return }
             Task { @MainActor in
-                window.alphaValue = self.coordinator.selectedScreenUUID == self.coordinator.preferredScreenUUID ? 1 : 0
+                // Setting no longer steers a single-window mode; just
+                // refresh per-screen positioning to match the latest
+                // user selection.
+                self?.adjustWindowPosition(changeAlpha: true)
             }
         }
 
@@ -386,18 +383,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
                 let mouseLocation = NSEvent.mouseLocation
 
-                var viewModel = self.vm
-
-                if Defaults[.showOnAllDisplays] {
-                    for screen in NSScreen.screens {
-                        if screen.frame.contains(mouseLocation) {
-                            if let uuid = screen.displayUUID, let screenViewModel = self.viewModels[uuid] {
-                                viewModel = screenViewModel
-                                break
-                            }
-                        }
+                // Pick the notch under the current mouse cursor; fall
+                // back to any enabled notch if the cursor isn't over one.
+                var viewModel: BrowViewModel?
+                for screen in NSScreen.screens {
+                    if screen.frame.contains(mouseLocation),
+                       let uuid = screen.displayUUID,
+                       let screenViewModel = self.viewModels[uuid] {
+                        viewModel = screenViewModel
+                        break
                     }
                 }
+                guard let viewModel = viewModel ?? self.viewModels.values.first else { return }
 
                 self.closeNotchTask?.cancel()
                 self.closeNotchTask = nil
@@ -425,16 +422,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        if !Defaults[.showOnAllDisplays] {
-            let viewModel = self.vm
-            let window = createBrowNotchWindow(
-                for: NSScreen.main ?? NSScreen.screens.first!, with: viewModel)
-            self.window = window
-            adjustWindowPosition(changeAlpha: true)
-        } else {
-            adjustWindowPosition(changeAlpha: true)
-        }
-
+        // `adjustWindowPosition` is the single entry point now — it
+        // reads `coordinator.enabledScreenUUIDs` and spawns / tears
+        // down per-screen windows accordingly.
+        adjustWindowPosition(changeAlpha: true)
         setupDragDetectors()
 
         if coordinator.firstLaunch {
@@ -490,68 +481,53 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func adjustWindowPosition(changeAlpha: Bool = false) {
-        if Defaults[.showOnAllDisplays] {
-            let currentScreenUUIDs = Set(NSScreen.screens.compactMap { $0.displayUUID })
+        // Unified multi-window path — `enabledScreenUUIDs` is the source
+        // of truth. The user can pick any subset of available displays
+        // and we spawn / tear down windows to match.
+        let availableUUIDs = Set(NSScreen.screens.compactMap { $0.displayUUID })
+        let targetUUIDs = coordinator.enabledScreenUUIDs.intersection(availableUUIDs)
 
-            // Remove windows for screens that no longer exist
-            for uuid in windows.keys where !currentScreenUUIDs.contains(uuid) {
-                if let window = windows[uuid] {
-                    window.close()
-                    NotchSpaceManager.shared.notchSpace.windows.remove(window)
-                    windows.removeValue(forKey: uuid)
-                    viewModels.removeValue(forKey: uuid)
-                }
+        // Tear down any lingering legacy single-window. Previous versions
+        // of the app would spawn this under the closed-mode path; it has
+        // no place in subset mode.
+        if let legacy = self.window {
+            legacy.close()
+            NotchSpaceManager.shared.notchSpace.windows.remove(legacy)
+            if let obs = windowScreenDidChangeObserver {
+                NotificationCenter.default.removeObserver(obs)
+                windowScreenDidChangeObserver = nil
+            }
+            self.window = nil
+        }
+
+        // Remove windows for screens that the user has deselected (or
+        // that have been physically disconnected).
+        for uuid in windows.keys where !targetUUIDs.contains(uuid) {
+            if let window = windows[uuid] {
+                window.close()
+                NotchSpaceManager.shared.notchSpace.windows.remove(window)
+                windows.removeValue(forKey: uuid)
+                viewModels.removeValue(forKey: uuid)
+            }
+        }
+
+        // Create or update windows for each enabled+available screen.
+        for screen in NSScreen.screens {
+            guard let uuid = screen.displayUUID, targetUUIDs.contains(uuid) else { continue }
+
+            if windows[uuid] == nil {
+                let viewModel = BrowViewModel(screenUUID: uuid)
+                let window = createBrowNotchWindow(for: screen, with: viewModel)
+
+                windows[uuid] = window
+                viewModels[uuid] = viewModel
             }
 
-            // Create or update windows for all screens
-            for screen in NSScreen.screens {
-                guard let uuid = screen.displayUUID else { continue }
-                
-                if windows[uuid] == nil {
-                    let viewModel = BrowViewModel(screenUUID: uuid)
-                    let window = createBrowNotchWindow(for: screen, with: viewModel)
+            if let window = windows[uuid], let viewModel = viewModels[uuid] {
+                positionWindow(window, on: screen, changeAlpha: changeAlpha)
 
-                    windows[uuid] = window
-                    viewModels[uuid] = viewModel
-                }
-
-                if let window = windows[uuid], let viewModel = viewModels[uuid] {
-                    positionWindow(window, on: screen, changeAlpha: changeAlpha)
-
-                    if viewModel.notchState == .closed {
-                        viewModel.close()
-                    }
-                }
-            }
-        } else {
-            let selectedScreen: NSScreen
-
-            if let preferredScreen = NSScreen.screen(withUUID: coordinator.preferredScreenUUID ?? "") {
-                coordinator.selectedScreenUUID = coordinator.preferredScreenUUID ?? ""
-                selectedScreen = preferredScreen
-            } else if Defaults[.automaticallySwitchDisplay], let mainScreen = NSScreen.main,
-                      let mainUUID = mainScreen.displayUUID {
-                coordinator.selectedScreenUUID = mainUUID
-                selectedScreen = mainScreen
-            } else {
-                if let window = window {
-                    window.alphaValue = 0
-                }
-                return
-            }
-
-            vm.screenUUID = selectedScreen.displayUUID
-            vm.notchSize = getClosedNotchSize(screenUUID: selectedScreen.displayUUID)
-
-            if window == nil {
-                window = createBrowNotchWindow(for: selectedScreen, with: vm)
-            }
-
-            if let window = window {
-                positionWindow(window, on: selectedScreen, changeAlpha: changeAlpha)
-
-                if vm.notchState == .closed {
-                    vm.close()
+                if viewModel.notchState == .closed {
+                    viewModel.close()
                 }
             }
         }

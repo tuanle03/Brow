@@ -136,14 +136,22 @@ final class ClaudeCodeBridge: ObservableObject {
             }
             ingest(parsed)
             switch parsed.event {
-            case .preToolUse(let payload):
-                // Suspends until the user decides in the notch (PR #5),
-                // a saved rule matches (PR #3 already), or the store's
-                // 55s timeout fires.
-                let decision = await ClaudeCodeStore.shared.handlePreToolUse(payload, rawJSON: parsed.rawJSON)
-                return .ok(jsonBody: decision.hookOutputJSON)
+            case .sessionStart(let payload):
+                ClaudeCodeStore.shared.recordSessionStart(payload)
+                return .ok(jsonBody: "{}")
+            case .sessionEnd(let payload):
+                ClaudeCodeStore.shared.recordSessionEnd(payload)
+                return .ok(jsonBody: "{}")
+            case .permissionRequest(let payload):
+                // Suspends until the user decides in the notch, a saved
+                // rule matches, or the store's 55s timeout fires.
+                let body = await ClaudeCodeStore.shared.handlePermissionRequest(payload, rawJSON: parsed.rawJSON)
+                return .ok(jsonBody: body)
             case .notification(let payload):
                 ClaudeCodeStore.shared.recordNotification(payload)
+                return .ok(jsonBody: "{}")
+            case .stop(let payload):
+                ClaudeCodeStore.shared.recordStop(payload)
                 return .ok(jsonBody: "{}")
             case .unknown:
                 return .ok(jsonBody: "{}")

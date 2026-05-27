@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import AppKit
+import SwiftUI
 
 /// Single source of truth for the AI Sessions feature once #3 lands:
 /// - Holds the FIFO queue of `PreToolUse` calls waiting on a human decision.
@@ -8,7 +9,7 @@ import AppKit
 /// - Persists "always allow" rules to `~/.brow/rules.json` so a tool the
 ///   user has trusted once never re-prompts.
 ///
-/// The bridge calls `handlePreToolUse(_:rawJSON:)` and awaits the resulting
+/// The bridge calls `handlePermissionRequest(_:rawJSON:)` and awaits the resulting
 /// `ApprovalDecision`. The UI (debug panel for now; real sneak peek in
 /// later PRs) calls `decide(_:as:)` to resolve the pending entry the user
 /// picked. A timeout on the bridge side guarantees we don't keep Claude
@@ -18,14 +19,33 @@ final class ClaudeCodeStore: ObservableObject {
     static let shared = ClaudeCodeStore()
 
     @Published private(set) var pending: [PendingApproval] = []
+    /// Resolved permission requests, newest first. Includes both
+    /// user-decided and auto-timed-out approvals so the user can scroll
+    /// back through prompts they may have missed. Capped to keep memory
+    /// bounded.
+    @Published private(set) var recentlyResolved: [ResolvedApproval] = []
     @Published private(set) var sessions: [String: SessionState] = [:]
     @Published private(set) var rules: [PermissionRule] = []
     @Published private(set) var lastRuleError: String?
+    /// Transient Claude Code `Notification` payload — set when one arrives,
+    /// cleared after a few seconds. Drives the small toast that pops out of
+    /// the notch when Claude needs the user's attention.
+    @Published private(set) var transientNotification: TransientNotification?
+
+    private static let recentlyResolvedCap = 30
+
+    /// True while Claude Code has *something* the user should see right now —
+    /// either a pending approval or a transient notification toast. ContentView
+    /// observes this and drives the notch expand / collapse animation.
+    var shouldAutoExpand: Bool {
+        !pending.isEmpty || transientNotification != nil
+    }
 
     /// Per-pending continuation, keyed by `PendingApproval.id`. Resolved
     /// exactly once — either by the user via `decide`, or by the bridge's
     /// timeout via `resolveTimeout`.
     private var continuations: [UUID: CheckedContinuation<ApprovalDecision, Never>] = [:]
+    private var notificationDismissTask: Task<Void, Never>?
 
     private init() {
         rules = (try? PermissionRule.loadAll()) ?? []
@@ -36,12 +56,8 @@ final class ClaudeCodeStore: ObservableObject {
     /// Returns the decision to send back to Claude Code. If a saved rule
     /// matches, returns immediately. Otherwise enqueues the request and
     /// suspends until the user decides (or the bridge times us out).
-    func handlePreToolUse(_ payload: PreToolUsePayload, rawJSON: String) async -> ApprovalDecision {
+    func handlePermissionRequest(_ payload: PermissionRequestPayload, rawJSON: String) async -> String {
         updateSession(from: payload)
-
-        if let matched = matchRule(for: payload) {
-            return matched
-        }
 
         let approval = PendingApproval(
             id: UUID(),
@@ -50,10 +66,35 @@ final class ClaudeCodeStore: ObservableObject {
             toolName: payload.toolName,
             toolInput: payload.toolInput ?? [:],
             projectDirectory: payload.projectDirectory ?? payload.cwd,
+            suggestions: payload.permissionSuggestions ?? [],
             rawJSON: rawJSON
         )
 
-        return await withCheckedContinuation { (cont: CheckedContinuation<ApprovalDecision, Never>) in
+        if let matched = matchRule(for: payload) {
+            return matched.hookOutputJSON(for: approval)
+        }
+
+        // AskUserQuestion is Claude's built-in multi-choice prompt: it
+        // renders its own interactive picker in the terminal and reads
+        // the user's answer from there. The permission hook can only
+        // return allow/deny, so a notch "Allow / Deny" bubble would be
+        // misleading and useless — auto-allow and instead surface the
+        // question as a transient notification so the user knows to
+        // switch to Claude Code to answer.
+        if payload.toolName == "AskUserQuestion" {
+            let decision: ApprovalDecision = .allow
+            archive(approval, outcome: .decided(decision))
+            let questionText = Self.extractAskUserQuestionText(from: payload.toolInput ?? [:])
+            let body = questionText
+                .map { "Claude is asking: \($0)" }
+                ?? "Claude is asking a question — answer in Claude Code."
+            surfaceToast(.notification(body),
+                         sessionID: payload.sessionID,
+                         projectDirectory: payload.projectDirectory)
+            return decision.hookOutputJSON(for: approval)
+        }
+
+        let decision = await withCheckedContinuation { (cont: CheckedContinuation<ApprovalDecision, Never>) in
             continuations[approval.id] = cont
             pending.append(approval)
             // Auto-fall back to .ask if the user hasn't decided in time.
@@ -65,6 +106,7 @@ final class ClaudeCodeStore: ObservableObject {
                 await MainActor.run { self?.resolveTimeout(for: id) }
             }
         }
+        return decision.hookOutputJSON(for: approval)
     }
 
     /// Called from the bridge when the hook script has been waiting too long.
@@ -72,6 +114,9 @@ final class ClaudeCodeStore: ObservableObject {
     /// its native prompt) so we never block the script past its own timeout.
     func resolveTimeout(for id: UUID) {
         guard let cont = continuations.removeValue(forKey: id) else { return }
+        if let approval = pending.first(where: { $0.id == id }) {
+            archive(approval, outcome: .timedOut)
+        }
         pending.removeAll { $0.id == id }
         cont.resume(returning: .ask)
     }
@@ -79,7 +124,9 @@ final class ClaudeCodeStore: ObservableObject {
     // MARK: - User-driven decisions
 
     /// Called by the UI / debug buttons. Resolves the matching pending entry
-    /// and persists a rule if `as == .allowAlways`.
+    /// and persists a local rule if `as == .allowAlways`. `.allowWith(s)`
+    /// hands Claude Code the suggestion so *it* records the rule on its side,
+    /// no Brow-local mirror needed.
     func decide(_ id: UUID, as decision: ApprovalDecision) {
         guard let approval = pending.first(where: { $0.id == id }),
               let cont = continuations.removeValue(forKey: id)
@@ -89,7 +136,24 @@ final class ClaudeCodeStore: ObservableObject {
         if decision == .allowAlways {
             persistAllowRule(for: approval)
         }
+        archive(approval, outcome: .decided(decision))
         cont.resume(returning: decision)
+    }
+
+    private func archive(_ approval: PendingApproval, outcome: ResolvedApproval.Outcome) {
+        let resolved = ResolvedApproval(
+            approval: approval,
+            outcome: outcome,
+            resolvedAt: Date()
+        )
+        recentlyResolved.insert(resolved, at: 0)
+        if recentlyResolved.count > Self.recentlyResolvedCap {
+            recentlyResolved.removeLast(recentlyResolved.count - Self.recentlyResolvedCap)
+        }
+    }
+
+    func clearRecentlyResolved() {
+        recentlyResolved.removeAll()
     }
 
     /// Convenience for the head-of-queue case (current sneak peek surface).
@@ -126,7 +190,7 @@ final class ClaudeCodeStore: ObservableObject {
         try? PermissionRule.saveAll(rules)
     }
 
-    private func matchRule(for payload: PreToolUsePayload) -> ApprovalDecision? {
+    private func matchRule(for payload: PermissionRequestPayload) -> ApprovalDecision? {
         for rule in rules where rule.matches(payload) {
             switch rule.decision {
             case .allow:    return .allow
@@ -138,7 +202,7 @@ final class ClaudeCodeStore: ObservableObject {
 
     // MARK: - Sessions
 
-    private func updateSession(from payload: PreToolUsePayload) {
+    private func updateSession(from payload: PermissionRequestPayload) {
         guard let id = payload.sessionID else { return }
         let now = Date()
         if var existing = sessions[id] {
@@ -157,8 +221,36 @@ final class ClaudeCodeStore: ObservableObject {
         }
     }
 
-    func recordNotification(_ payload: NotificationPayload) {
+    func recordSessionStart(_ payload: SessionStartPayload) {
+        touchSession(id: payload.sessionID, projectDirectory: payload.projectDirectory ?? payload.cwd)
+    }
+
+    func recordSessionEnd(_ payload: SessionEndPayload) {
         guard let id = payload.sessionID else { return }
+        sessions.removeValue(forKey: id)
+    }
+
+    func recordNotification(_ payload: NotificationPayload) {
+        touchSession(id: payload.sessionID, projectDirectory: payload.projectDirectory)
+        surfaceToast(.notification(payload.message),
+                     sessionID: payload.sessionID,
+                     projectDirectory: payload.projectDirectory)
+    }
+
+    func recordStop(_ payload: StopPayload) {
+        touchSession(id: payload.sessionID, projectDirectory: payload.projectDirectory ?? payload.cwd)
+        surfaceToast(.stopped,
+                     sessionID: payload.sessionID,
+                     projectDirectory: payload.projectDirectory ?? payload.cwd)
+    }
+
+    func dismissTransientNotification() {
+        notificationDismissTask?.cancel()
+        transientNotification = nil
+    }
+
+    private func touchSession(id: String?, projectDirectory: String?) {
+        guard let id else { return }
         let now = Date()
         if var existing = sessions[id] {
             existing.lastEventAt = now
@@ -169,13 +261,113 @@ final class ClaudeCodeStore: ObservableObject {
                 firstSeenAt: now,
                 lastEventAt: now,
                 lastTool: nil,
-                projectDirectory: payload.projectDirectory
+                projectDirectory: projectDirectory
             )
         }
+    }
+
+    private func surfaceToast(_ kind: TransientNotification.Kind,
+                              sessionID: String?,
+                              projectDirectory: String?) {
+        transientNotification = TransientNotification(
+            id: UUID(),
+            receivedAt: Date(),
+            sessionID: sessionID,
+            kind: kind,
+            projectDirectory: projectDirectory
+        )
+        notificationDismissTask?.cancel()
+        notificationDismissTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(5))
+            await MainActor.run {
+                guard let self else { return }
+                if !Task.isCancelled { self.transientNotification = nil }
+            }
+        }
+    }
+
+    /// Best-effort extraction of the prompt text from an `AskUserQuestion`
+    /// `tool_input`. Tries both the simple top-level `question` field and
+    /// Claude Code's structured `questions: [{ question, options }]`
+    /// schema. Returns nil if neither is present.
+    private static func extractAskUserQuestionText(from toolInput: [String: AnyJSON]) -> String? {
+        if case let .string(s)? = toolInput["question"], !s.isEmpty {
+            return s
+        }
+        if case let .array(arr)? = toolInput["questions"],
+           case let .object(q)? = arr.first,
+           case let .string(s)? = q["question"],
+           !s.isEmpty {
+            return s
+        }
+        return nil
     }
 }
 
 // MARK: - Models
+
+struct ResolvedApproval: Identifiable, Equatable {
+    enum Outcome: Equatable {
+        case decided(ApprovalDecision)
+        /// Brow's user-decision timer fired (~55s) before the user touched
+        /// anything; Claude Code fell back to its native dialog.
+        case timedOut
+    }
+
+    var id: UUID { approval.id }
+    let approval: PendingApproval
+    let outcome: Outcome
+    let resolvedAt: Date
+
+    var statusLabel: String {
+        switch outcome {
+        case .decided(.allow):                       return "Allowed"
+        case .decided(.allowAlways):                 return "Allowed (always)"
+        case .decided(.allowWith(let suggestion)):   return suggestion.displayLabel
+        case .decided(.deny):                        return "Denied"
+        case .decided(.ask):                         return "Deferred to CLI"
+        case .timedOut:                              return "Timed out"
+        }
+    }
+
+    var statusTint: Color {
+        switch outcome {
+        case .decided(.allow), .decided(.allowAlways), .decided(.allowWith): return .green
+        case .decided(.deny):     return .red
+        case .decided(.ask):      return .secondary
+        case .timedOut:           return .orange
+        }
+    }
+}
+
+struct TransientNotification: Identifiable, Equatable {
+    enum Kind: Equatable {
+        /// Claude Code emitted a Notification event with a message string.
+        case notification(String)
+        /// Claude finished responding and is now waiting for the next prompt.
+        case stopped
+    }
+
+    let id: UUID
+    let receivedAt: Date
+    let sessionID: String?
+    let kind: Kind
+    let projectDirectory: String?
+
+    var title: String {
+        switch kind {
+        case .notification: return "Claude"
+        case .stopped:      return "Claude is done"
+        }
+    }
+
+    var body: String {
+        switch kind {
+        case .notification(let message): return message
+        case .stopped:                   return projectDirectory.map { ($0 as NSString).lastPathComponent } ?? "Ready for your next prompt"
+        }
+    }
+}
 
 struct PendingApproval: Identifiable, Equatable {
     let id: UUID
@@ -184,6 +376,10 @@ struct PendingApproval: Identifiable, Equatable {
     let toolName: String
     let toolInput: [String: AnyJSON]
     let projectDirectory: String?
+    /// Claude Code's per-request suggestions — one row per "Yes, allow X" /
+    /// "Switch to acceptEdits" entry. Empty means the CLI is offering the
+    /// minimal 2-option Yes/No prompt.
+    let suggestions: [PermissionSuggestion]
     let rawJSON: String
 
     /// Best-effort one-line summary of the call (e.g. the bash command, the
@@ -213,20 +409,57 @@ struct SessionState: Identifiable, Equatable {
 
 enum ApprovalDecision: Equatable {
     case allow
+    /// Allow + apply *all* of Claude Code's suggestions (legacy "Always
+    /// Allow" path — Brow saves a local rule too so future calls bypass
+    /// the prompt entirely).
     case allowAlways
+    /// Allow + apply exactly one of Claude Code's suggestions, e.g. "Always
+    /// allow Bash in /project/" or "Switch to acceptEdits".
+    case allowWith(PermissionSuggestion)
     case deny
+    /// "Defer to Claude Code's native UI" — the bridge returns an empty
+    /// `hookSpecificOutput` so the CLI shows its own prompt. Used when the
+    /// store's user-decision timeout fires before the user picked anything.
     case ask
 
-    /// JSON body Brow writes back on the HTTP response. Maps to Claude
-    /// Code's `hookSpecificOutput.permissionDecision`.
-    var hookOutputJSON: String {
-        let value: String
+    /// Hook response body. `PermissionRequest` uses
+    /// `hookSpecificOutput.decision.{behavior, updatedPermissions}`. `.ask`
+    /// returns an empty body so Claude Code falls back to its native dialog.
+    func hookOutputJSON(for approval: PendingApproval) -> String {
         switch self {
-        case .allow, .allowAlways: value = "allow"
-        case .deny:                value = "deny"
-        case .ask:                 value = "ask"
+        case .allow:
+            return Self.responseJSON(decision: ["behavior": "allow"])
+        case .allowAlways:
+            var d: [String: Any] = ["behavior": "allow"]
+            if !approval.suggestions.isEmpty {
+                d["updatedPermissions"] = approval.suggestions.map(\.asResponseDict)
+            }
+            return Self.responseJSON(decision: d)
+        case .allowWith(let suggestion):
+            return Self.responseJSON(decision: [
+                "behavior": "allow",
+                "updatedPermissions": [suggestion.asResponseDict],
+            ])
+        case .deny:
+            return Self.responseJSON(decision: ["behavior": "deny"])
+        case .ask:
+            return "{}"
         }
-        return #"{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"\#(value)"}}"#
+    }
+
+    private static func responseJSON(decision: [String: Any]) -> String {
+        let envelope: [String: Any] = [
+            "hookSpecificOutput": [
+                "hookEventName": "PermissionRequest",
+                "decision": decision,
+            ]
+        ]
+        if let data = try? JSONSerialization.data(withJSONObject: envelope,
+                                                  options: [.withoutEscapingSlashes]),
+           let str = String(data: data, encoding: .utf8) {
+            return str
+        }
+        return #"{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"deny"}}}"#
     }
 }
 
@@ -247,7 +480,7 @@ struct PermissionRule: Codable, Equatable, Identifiable {
         case deny
     }
 
-    func matches(_ payload: PreToolUsePayload) -> Bool {
+    func matches(_ payload: PermissionRequestPayload) -> Bool {
         guard toolName == payload.toolName else { return false }
         guard let matcher = argMatcher, !matcher.isEmpty else { return true }
         let target = payload.toolInput?["command"]?.asDisplayString
@@ -258,7 +491,7 @@ struct PermissionRule: Codable, Equatable, Identifiable {
     }
 
     static var rulesPath: String {
-        (NSHomeDirectory() as NSString).appendingPathComponent(".brow/rules.json")
+        (ClaudeCodeHookInstaller.realHomeDirectory as NSString).appendingPathComponent(".brow/rules.json")
     }
 
     private struct Envelope: Codable {

@@ -20,6 +20,34 @@ signing, app icon, menu/Settings copy and CI have been rebranded.
 The first downloadable build ships unsigned by an Apple Developer ID,
 so the install flow requires one extra step (below).
 
+## Highlights beyond upstream
+
+- **Claude Code integration** — Brow listens for the Claude Code
+  hooks on `127.0.0.1:21064` and surfaces them in the notch:
+  - The notch auto-expands into a dedicated AI tab when a
+    permission request arrives, with a prominent
+    Allow / Suggestion / Deny row sized for the notch.
+  - `AskUserQuestion` is auto-allowed and surfaces a toast pointing
+    the user to the terminal — Claude's native multi-choice picker
+    stays in charge.
+  - A rainbow halo wraps the notch outline (3 corners + bottom edge)
+    while there's something waiting, fading out once the queue is
+    empty.
+  - Keyboard shortcuts for Allow / Allow-always / Deny live in
+    **Settings → Shortcuts** and act on the head of the queue.
+  ![AI approval bubble inside the notch](docs/screenshots/ai-approval.png)
+- **Per-screen display selection** — pick any subset of connected
+  displays to render the notch on, with a "Select all / none" menu.
+  The selection is keyed by display UUID and persists across
+  disconnects so plugging the screen back in restores the previous
+  choice.
+  ![Multi-display picker](docs/screenshots/display-picker.png)
+- **Custom Lottie animations** — drop in `.json` files (uploaded from
+  disk *or* pasted as a URL) and use them as either the music
+  visualizer or the AI mascot. Per-visualizer Speed + Scale sliders
+  go down to 1% so even 1080×1080 viewport animations fit cleanly.
+  ![Custom visualizer library](docs/screenshots/visualizer-library.png)
+
 ## Install
 
 1. Download the latest `Brow-x.y.z.dmg` from
