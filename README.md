@@ -20,6 +20,12 @@ signing, app icon, menu/Settings copy and CI have been rebranded.
 The first downloadable build ships unsigned by an Apple Developer ID,
 so the install flow requires one extra step (below).
 
+## Screenshots
+
+![Closed notch](docs/screenshots/closed-notch.png)
+![Music live activity expanded](docs/screenshots/music-live-activity.png)
+![AI approval bubble inside the notch](docs/screenshots/ai-approval.png)
+
 ## Highlights beyond upstream
 
 - **Claude Code integration** — Brow listens for the Claude Code
@@ -35,18 +41,15 @@ so the install flow requires one extra step (below).
     empty.
   - Keyboard shortcuts for Allow / Allow-always / Deny live in
     **Settings → Shortcuts** and act on the head of the queue.
-  ![AI approval bubble inside the notch](docs/screenshots/ai-approval.png)
 - **Per-screen display selection** — pick any subset of connected
   displays to render the notch on, with a "Select all / none" menu.
   The selection is keyed by display UUID and persists across
   disconnects so plugging the screen back in restores the previous
   choice.
-  ![Multi-display picker](docs/screenshots/display-picker.png)
 - **Custom Lottie animations** — drop in `.json` files (uploaded from
   disk *or* pasted as a URL) and use them as either the music
   visualizer or the AI mascot. Per-visualizer Speed + Scale sliders
   go down to 1% so even 1080×1080 viewport animations fit cleanly.
-  ![Custom visualizer library](docs/screenshots/visualizer-library.png)
 
 ## Install
 

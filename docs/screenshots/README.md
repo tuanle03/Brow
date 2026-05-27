@@ -1,14 +1,13 @@
 # Screenshots
 
-Drop PNGs here that match the names referenced from the project
-[`README.md`](../../README.md). They render inline in the README on
-GitHub.
+PNGs referenced from the project [`README.md`](../../README.md). They
+render inline on the GitHub repo home page.
 
-| File | What to capture |
+| File | What it shows |
 | --- | --- |
-| `ai-approval.png` | The expanded notch on the AI tab with a real Claude Code permission bubble visible (mascot, tool + path, Allow / Suggestion / Deny). The rainbow halo on the notch outline is a nice bonus. |
-| `display-picker.png` | Settings → General → "Show notch on" card with the per-screen toggles (and the MAIN badge on one of them). |
-| `visualizer-library.png` | Settings → Appearance → "Custom vizualizers" card with at least one Lottie added and the inline Speed + Scale sliders open. |
+| `closed-notch.png` | The notch in its default closed state on the desktop. |
+| `music-live-activity.png` | Music live activity expanded from the notch while a track is playing. |
+| `ai-approval.png` | The notch expanded into the AI tab with a Claude Code permission bubble (mascot, tool + path, Allow / Suggestion / Deny). |
 
-Recommended capture: macOS Screenshot (`⌘⇧4`) at full Retina
-resolution; export as PNG so the rainbow halo stays sharp.
+Captures are full Retina PNG. Replace any of them in place and the
+README updates on the next push.
