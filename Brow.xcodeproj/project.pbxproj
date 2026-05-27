@@ -145,6 +145,7 @@
 		B1FEB4992C7686630066EBBC /* PanGesture.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1FEB4982C7686630066EBBC /* PanGesture.swift */; };
 		C7DDB52001DBCD22DBD6425F /* ClaudeCodeBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEE90A5FC095E57C34A393C5 /* ClaudeCodeBridge.swift */; };
 		D26ACCCCB2D3A4BDDC700856 /* AISettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32BA6C5A41A6A419B7511B48 /* AISettingsView.swift */; };
+		D35FE994D92D4D4E9E8A7880 /* ClaudeCodeHookInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9827C1AD5BA0F5A25573640C /* ClaudeCodeHookInstaller.swift */; };
 		F38DE6482D8243E7008B5C6D /* BatteryActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F38DE6472D8243E2008B5C6D /* BatteryActivityManager.swift */; };
 /* End PBXBuildFile section */
 
@@ -285,6 +286,7 @@
 		5955950C2E900ED800C66711 /* ApplicationRelauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationRelauncher.swift; sourceTree = "<group>"; };
 		59D8C23B2E589FAA00147B33 /* VolumeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeManager.swift; sourceTree = "<group>"; };
 		76DF98C0B2319A5CE47187D3 /* ClaudeCodeEvent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClaudeCodeEvent.swift; sourceTree = "<group>"; };
+		9827C1AD5BA0F5A25573640C /* ClaudeCodeHookInstaller.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClaudeCodeHookInstaller.swift; sourceTree = "<group>"; };
 		9A0887312C7A693000C160EA /* TabButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabButton.swift; sourceTree = "<group>"; };
 		9A0887342C7AFF8E00C160EA /* TabSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabSelectionView.swift; sourceTree = "<group>"; };
 		9A987A032C73CA66005CA465 /* ShelfView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShelfView.swift; sourceTree = "<group>"; };
@@ -445,6 +447,7 @@
 				76DF98C0B2319A5CE47187D3 /* ClaudeCodeEvent.swift */,
 				DEE90A5FC095E57C34A393C5 /* ClaudeCodeBridge.swift */,
 				32BA6C5A41A6A419B7511B48 /* AISettingsView.swift */,
+				9827C1AD5BA0F5A25573640C /* ClaudeCodeHookInstaller.swift */,
 			);
 			name = AI;
 			path = AI;
@@ -1060,6 +1063,7 @@
 				912304BF14946BA9A0077BB8 /* ClaudeCodeEvent.swift in Sources */,
 				C7DDB52001DBCD22DBD6425F /* ClaudeCodeBridge.swift in Sources */,
 				D26ACCCCB2D3A4BDDC700856 /* AISettingsView.swift in Sources */,
+				D35FE994D92D4D4E9E8A7880 /* ClaudeCodeHookInstaller.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

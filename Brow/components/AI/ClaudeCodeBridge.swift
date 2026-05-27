@@ -135,9 +135,9 @@ final class ClaudeCodeBridge: ObservableObject {
                 return .badRequest("Could not parse event JSON")
             }
             ingest(parsed)
-            // MVP just acknowledges. Future PRs will block here until the
-            // user approves / denies and return a decision back to the hook.
-            return .ok(jsonBody: #"{"permissionDecision":"allow"}"#)
+            // MVP auto-allow + correctly shaped Claude Code hookSpecificOutput.
+            // Future PRs block here until the user picks Allow / Always / Deny.
+            return .ok(jsonBody: defaultDecision(for: parsed))
         case ("GET", "/healthz"):
             return .ok(jsonBody: #"{"ok":true}"#)
         default:
@@ -148,6 +148,18 @@ final class ClaudeCodeBridge: ObservableObject {
     private func ingest(_ event: ClaudeCodeIncomingEvent) {
         lastEvent = event
         totalEventsSeen += 1
+    }
+
+    /// MVP decision shape — auto-allow every PreToolUse with a properly
+    /// formed `hookSpecificOutput`, and acknowledge other hooks silently.
+    /// Subsequent PRs replace this with the queue-driven response path.
+    private func defaultDecision(for event: ClaudeCodeIncomingEvent) -> String {
+        switch event.event {
+        case .preToolUse:
+            return #"{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow"}}"#
+        case .notification, .unknown:
+            return "{}"
+        }
     }
 }
 
