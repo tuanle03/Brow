@@ -47,10 +47,17 @@ jobs:
           echo "Resolved version=${VERSION} tag=${TAG}"
 
       - name: Patch project version (build-time only)
+        id: build
         run: |
           set -euo pipefail
           VERSION="${{ steps.vers.outputs.version }}"
-          BUILD_NUMBER="${GITHUB_RUN_NUMBER}"
+          # Monotonically increasing build number derived from the wall clock.
+          # Format: YYMMDDHHMM → 10 digits, always > any previous build, and
+          # comfortably less than 2^31 until 2068. Used both inside the app
+          # (CFBundleVersion) and in the appcast's <sparkle:version>; Sparkle
+          # compares those two to decide whether an update is available.
+          BUILD_NUMBER="$(date -u "+%y%m%d%H%M")"
+          echo "build_number=${BUILD_NUMBER}" >> "$GITHUB_OUTPUT"
           sed -i '' "s/MARKETING_VERSION = [^;]*/MARKETING_VERSION = ${VERSION}/g" Brow.xcodeproj/project.pbxproj
           sed -i '' "s/CURRENT_PROJECT_VERSION = [^;]*/CURRENT_PROJECT_VERSION = ${BUILD_NUMBER}/g" Brow.xcodeproj/project.pbxproj
 
@@ -169,7 +176,9 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="${{ steps.vers.outputs.version }}"
-          BUILD="${GITHUB_RUN_NUMBER}"
+          # Must match the CFBundleVersion baked into the DMG by the
+          # "Patch project version" step — Sparkle's comparison is build-vs-build.
+          BUILD="${{ steps.build.outputs.build_number }}"
           PUB_DATE="$(date -u "+%a, %d %b %Y %H:%M:%S +0000")"
           DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${{ steps.vers.outputs.tag }}/Brow-${VERSION}.dmg"
 
