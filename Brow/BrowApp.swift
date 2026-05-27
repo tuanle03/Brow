@@ -26,6 +26,10 @@ struct DynamicNotchApp: App {
 
         // Initialize the settings window controller with the updater controller
         SettingsWindowController.shared.setUpdaterController(updaterController)
+
+        // Boot the Claude Code bridge so PreToolUse / Notification hook posts
+        // start arriving immediately. UI-level surfacing comes in later PRs.
+        ClaudeCodeBridge.shared.start()
     }
 
     var body: some Scene {
