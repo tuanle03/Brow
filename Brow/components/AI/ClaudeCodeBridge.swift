@@ -135,9 +135,19 @@ final class ClaudeCodeBridge: ObservableObject {
                 return .badRequest("Could not parse event JSON")
             }
             ingest(parsed)
-            // MVP just acknowledges. Future PRs will block here until the
-            // user approves / denies and return a decision back to the hook.
-            return .ok(jsonBody: #"{"permissionDecision":"allow"}"#)
+            switch parsed.event {
+            case .preToolUse(let payload):
+                // Suspends until the user decides in the notch (PR #5),
+                // a saved rule matches (PR #3 already), or the store's
+                // 55s timeout fires.
+                let decision = await ClaudeCodeStore.shared.handlePreToolUse(payload, rawJSON: parsed.rawJSON)
+                return .ok(jsonBody: decision.hookOutputJSON)
+            case .notification(let payload):
+                ClaudeCodeStore.shared.recordNotification(payload)
+                return .ok(jsonBody: "{}")
+            case .unknown:
+                return .ok(jsonBody: "{}")
+            }
         case ("GET", "/healthz"):
             return .ok(jsonBody: #"{"ok":true}"#)
         default:

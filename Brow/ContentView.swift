@@ -204,6 +204,14 @@ struct ContentView: View {
         }
         .padding(.bottom, 8)
         .frame(maxWidth: windowSize.width, maxHeight: windowSize.height, alignment: .top)
+        .overlay(alignment: .top) {
+            // AI Sessions sneak peek — appears just below the notch when
+            // Claude Code is blocking on the user. PR #5 of the AI feature.
+            BrowApprovalSneakPeek()
+                .padding(.top, vm.effectiveClosedNotchHeight + 8)
+                .allowsHitTesting(true)
+                .animation(.spring(response: 0.4, dampingFraction: 0.78), value: ClaudeCodeStore.shared.pending.count)
+        }
         .compositingGroup()
         .scaleEffect(
             x: gestureScale,
@@ -345,6 +353,8 @@ struct ContentView: View {
             if vm.notchState == .open {
                 VStack {
                     switch coordinator.currentView {
+                    case .ai:
+                        AISessionsTabView()
                     case .home:
                         NotchHomeView(albumArtNamespace: albumArtNamespace)
                     case .shelf:

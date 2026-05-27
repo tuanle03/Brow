@@ -355,6 +355,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
         }
 
+        // AI Sessions — head-of-queue shortcuts. No-op when the queue is empty.
+        KeyboardShortcuts.onKeyDown(for: .aiApprovalAllow) {
+            Task { @MainActor in ClaudeCodeStore.shared.decideHead(as: .allow) }
+        }
+        KeyboardShortcuts.onKeyDown(for: .aiApprovalAllowAlways) {
+            Task { @MainActor in ClaudeCodeStore.shared.decideHead(as: .allowAlways) }
+        }
+        KeyboardShortcuts.onKeyDown(for: .aiApprovalDeny) {
+            Task { @MainActor in ClaudeCodeStore.shared.decideHead(as: .deny) }
+        }
+
         KeyboardShortcuts.onKeyDown(for: .toggleSneakPeek) { [weak self] in
             guard let self = self else { return }
             if Defaults[.sneakPeekStyles] == .inline {
