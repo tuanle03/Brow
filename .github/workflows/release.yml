@@ -125,33 +125,31 @@ jobs:
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
-          set -euo pipefail
+          set -x
           if [[ -z "${SPARKLE_PRIVATE_KEY:-}" ]]; then
-            echo "::error::Repo secret SPARKLE_PRIVATE_KEY is not set. Add it (the 44-char ed25519 seed) at:"
-            echo "::error::https://github.com/${{ github.repository }}/settings/secrets/actions"
+            echo "::error::Repo secret SPARKLE_PRIVATE_KEY is not set."
             exit 1
           fi
 
-          # Sparkle bundles its CLI tools inside the binary release tarball,
-          # not the SwiftPM checkout. Pull the same version Brow links against
-          # and use sign_update from there. Avoids depending on whether the
-          # CI cache laid out DerivedData the way we expect.
+          # Sparkle bundles its CLI tools inside the binary release tarball.
+          # Pull the same version Brow links against and use sign_update.
           SPARKLE_VERSION="2.9.1"
           SPARKLE_DIR="${RUNNER_TEMP}/sparkle-${SPARKLE_VERSION}"
-          if [[ ! -x "${SPARKLE_DIR}/bin/sign_update" ]]; then
-            mkdir -p "${SPARKLE_DIR}"
-            curl --silent --show-error --location --fail \
-              "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz" \
-              -o "${RUNNER_TEMP}/sparkle.tar.xz"
-            tar -xJf "${RUNNER_TEMP}/sparkle.tar.xz" -C "${SPARKLE_DIR}"
-          fi
-
-          SIGN_TOOL="${SPARKLE_DIR}/bin/sign_update"
-          if [[ ! -x "${SIGN_TOOL}" ]]; then
-            echo "::error::Could not locate Sparkle sign_update at ${SIGN_TOOL}"
-            ls -la "${SPARKLE_DIR}" "${SPARKLE_DIR}/bin" 2>&1 || true
+          mkdir -p "${SPARKLE_DIR}"
+          curl --show-error --location --fail \
+            "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz" \
+            -o "${RUNNER_TEMP}/sparkle.tar.xz"
+          ls -la "${RUNNER_TEMP}/sparkle.tar.xz"
+          tar -xJf "${RUNNER_TEMP}/sparkle.tar.xz" -C "${SPARKLE_DIR}"
+          echo "Contents of ${SPARKLE_DIR}:"
+          find "${SPARKLE_DIR}" -maxdepth 3 -type f -name 'sign_update' -o -name 'README*'
+          SIGN_TOOL="$(find "${SPARKLE_DIR}" -type f -name sign_update -perm -u+x -print -quit)"
+          if [[ -z "${SIGN_TOOL}" || ! -x "${SIGN_TOOL}" ]]; then
+            echo "::error::Could not locate Sparkle sign_update under ${SPARKLE_DIR}"
+            find "${SPARKLE_DIR}" -maxdepth 4 | head -30
             exit 1
           fi
+          echo "Using SIGN_TOOL=${SIGN_TOOL}"
 
           KEY_FILE="$(mktemp)"
           trap 'rm -f "${KEY_FILE}"' EXIT
