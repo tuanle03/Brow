@@ -1284,6 +1284,7 @@ struct Appearance: View {
     @Default(.customVisualizers) var customVisualizers
     @Default(.selectedVisualizer) var selectedVisualizer
     @Default(.selectedAIMascotVisualizer) var selectedAIMascotVisualizer
+    @Default(.selectedIdleVisualizer) var selectedIdleVisualizer
 
     let icons: [String] = ["brow-logo"]
     @State private var selectedIcon: String = "brow-logo"
@@ -1371,10 +1372,27 @@ struct Appearance: View {
                     }
                 }
                 .disabled(customVisualizers.isEmpty)
+
+                // Idle animation — third slot, shown in the closed notch
+                // whenever no music is playing. "None" disables the idle
+                // activity entirely.
+                Picker(
+                    "Idle animation",
+                    selection: Binding<CustomVisualizer?>(
+                        get: { selectedIdleVisualizer },
+                        set: { selectedIdleVisualizer = $0 }
+                    )
+                ) {
+                    Text("None").tag(CustomVisualizer?.none)
+                    ForEach(customVisualizers, id: \.self) { visualizer in
+                        Text(visualizer.name).tag(Optional(visualizer))
+                    }
+                }
+                .disabled(customVisualizers.isEmpty)
             } header: {
                 Text("Custom animations")
             } footer: {
-                Text("Animations live in the library below. Music animation plays while music is on and the notch is closed. AI mascot replaces the built-in face in the AI tab and approval bubble.")
+                Text("Animations live in the library below. Music animation plays while music is on. AI mascot replaces the built-in face in the AI tab. Idle animation plays in the closed notch whenever no music is on.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -1455,6 +1473,9 @@ struct Appearance: View {
                                 }
                                 if visualizer == selectedAIMascotVisualizer {
                                     selectedAIMascotVisualizer = nil
+                                }
+                                if visualizer == selectedIdleVisualizer {
+                                    selectedIdleVisualizer = nil
                                 }
                             }
                         } label: {
@@ -1573,6 +1594,7 @@ struct Appearance: View {
                                     customVisualizers[idx] = updated
                                     if selectedVisualizer == selected { selectedVisualizer = updated }
                                     if selectedAIMascotVisualizer == selected { selectedAIMascotVisualizer = updated }
+                                    if selectedIdleVisualizer == selected { selectedIdleVisualizer = updated }
                                     selectedListVisualizer = updated
                                 }
                             ), in: 0.1...2, step: 0.1)
@@ -1590,6 +1612,7 @@ struct Appearance: View {
                                     customVisualizers[idx] = updated
                                     if selectedVisualizer == selected { selectedVisualizer = updated }
                                     if selectedAIMascotVisualizer == selected { selectedAIMascotVisualizer = updated }
+                                    if selectedIdleVisualizer == selected { selectedIdleVisualizer = updated }
                                     selectedListVisualizer = updated
                                 }
                             ), in: 0.01...1.0, step: 0.01)

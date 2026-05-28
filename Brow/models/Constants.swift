@@ -155,6 +155,10 @@ extension Defaults.Keys {
     /// `BrowMascot` in the AI sessions tab + approval bubbles. Picks from
     /// the same `customVisualizers` library as the music visualizer.
     static let selectedAIMascotVisualizer = Key<CustomVisualizer?>("selectedAIMascotVisualizer", default: nil)
+    /// Optional Lottie animation shown in the closed notch when no music is
+    /// playing. Picks from the same `customVisualizers` library; nil = no
+    /// idle activity (fall back to existing `BrowFaceAnimation` behavior).
+    static let selectedIdleVisualizer = Key<CustomVisualizer?>("selectedIdleVisualizer", default: nil)
     
     // MARK: Gestures
     static let enableGestures = Key<Bool>("enableGestures", default: true)
