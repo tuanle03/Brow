@@ -124,6 +124,7 @@
 		AF23C5FA2FC952E600654A89 /* AIApproveSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF23C5F92FC952E600654A89 /* AIApproveSection.swift */; };
 		AF23C5FC2FC952F900654A89 /* AIAskSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF23C5FB2FC952F900654A89 /* AIAskSection.swift */; };
 		AF23C5FF2FC95C9800654A89 /* TerminalJumpService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF23C5FE2FC95C9800654A89 /* TerminalJumpService.swift */; };
+		AF23C6012FC95D6300654A89 /* AISoundEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF23C6002FC95D6300654A89 /* AISoundEffects.swift */; };
 		AF46429E2FC845850045D431 /* IdleLottieActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF46429D2FC845850045D431 /* IdleLottieActivity.swift */; };
 		B10348D92C74E56000475897 /* ConditionalModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10348D82C74E56000475897 /* ConditionalModifier.swift */; };
 		B10F84A32C6C9596009F3026 /* TestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10F84A22C6C9596009F3026 /* TestView.swift */; };
@@ -313,6 +314,7 @@
 		AF23C5F92FC952E600654A89 /* AIApproveSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIApproveSection.swift; sourceTree = "<group>"; };
 		AF23C5FB2FC952F900654A89 /* AIAskSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIAskSection.swift; sourceTree = "<group>"; };
 		AF23C5FE2FC95C9800654A89 /* TerminalJumpService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalJumpService.swift; sourceTree = "<group>"; };
+		AF23C6002FC95D6300654A89 /* AISoundEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AISoundEffects.swift; sourceTree = "<group>"; };
 		AF46429D2FC845850045D431 /* IdleLottieActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleLottieActivity.swift; sourceTree = "<group>"; };
 		B10348D82C74E56000475897 /* ConditionalModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConditionalModifier.swift; sourceTree = "<group>"; };
 		B10F84A22C6C9596009F3026 /* TestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestView.swift; sourceTree = "<group>"; };
@@ -741,6 +743,7 @@
 			isa = PBXGroup;
 			children = (
 				AF23C5FE2FC95C9800654A89 /* TerminalJumpService.swift */,
+				AF23C6002FC95D6300654A89 /* AISoundEffects.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -1038,6 +1041,7 @@
 				1160F8D82DD98230006FBB94 /* NotchShape.swift in Sources */,
 				5917FD112E57891600E87F1C /* MediaKeyInterceptor.swift in Sources */,
 				14C08BC12C8E03AD000F8AA0 /* NSImage+Extensions.swift in Sources */,
+				AF23C6012FC95D6300654A89 /* AISoundEffects.swift in Sources */,
 				149E0B9A2C737D40006418B1 /* WebcamView.swift in Sources */,
 				1471639A2C5D35FF0068B555 /* MusicManager.swift in Sources */,
 				B1B112932C6A577E00093D8F /* MouseTracker.swift in Sources */,

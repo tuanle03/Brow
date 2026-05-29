@@ -155,6 +155,11 @@ extension Defaults.Keys {
     /// `BrowMascot` in the AI sessions tab + approval bubbles. Picks from
     /// the same `customVisualizers` library as the music visualizer.
     static let selectedAIMascotVisualizer = Key<CustomVisualizer?>("selectedAIMascotVisualizer", default: nil)
+    /// Play short macOS system sounds when AI panel state changes — a
+    /// permission request arrives, a notification toast pops, the user
+    /// jumps back to a terminal. Off by default so the integration stays
+    /// silent for users who didn't ask for noise.
+    static let aiSoundEffectsEnabled = Key<Bool>("aiSoundEffectsEnabled", default: false)
     /// Optional Lottie animation shown in the closed notch when no music is
     /// playing. Picks from the same `customVisualizers` library; nil = no
     /// idle activity (fall back to existing `BrowFaceAnimation` behavior).

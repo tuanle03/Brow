@@ -19,6 +19,12 @@ final class AITaskRegistry: ObservableObject {
 
     private let store: ClaudeCodeStore
     private var cancellables: Set<AnyCancellable> = []
+    // Snapshot of the previous refresh's "attention surface" so we can
+    // play a sound exactly once per *new* pending approval / toast and
+    // never repeatedly on re-render.
+    private var previousPendingIDs: Set<UUID> = []
+    private var previousTransientID: UUID?
+    private var hasPerformedInitialRefresh = false
 
     private init() {
         self.store = ClaudeCodeStore.shared
@@ -67,6 +73,29 @@ final class AITaskRegistry: ObservableObject {
         let projected = Self.project(snapshot)
         tasks = projected.tasks
         displayMode = projected.mode
+        playSoundsForTransitions(snapshot: snapshot)
+    }
+
+    /// Plays exactly one sound when a *new* permission request lands or a
+    /// *new* transient toast pops. Skipped on the first refresh after
+    /// launch so we don't chirp every time the user restarts Brow with
+    /// stale events still in the queue.
+    private func playSoundsForTransitions(snapshot: Snapshot) {
+        let newPendingIDs = Set(snapshot.pending.map(\.id))
+        let arrivedPending = newPendingIDs.subtracting(previousPendingIDs)
+        let newTransientID = snapshot.transient?.id
+
+        if hasPerformedInitialRefresh {
+            if !arrivedPending.isEmpty {
+                AISoundEffects.play(.approvalArrived)
+            } else if let id = newTransientID, id != previousTransientID {
+                AISoundEffects.play(.notification)
+            }
+        }
+
+        previousPendingIDs = newPendingIDs
+        previousTransientID = newTransientID
+        hasPerformedInitialRefresh = true
     }
 
     // MARK: - Projection
@@ -95,13 +124,16 @@ final class AITaskRegistry: ObservableObject {
 
         var tasks: [AITask] = snapshot.sessions.values.map { session in
             let approval = pendingBySession[session.id]?.first
-            let isAsking = snapshot.transient?.sessionID == session.id
-                && snapshot.transient?.body.hasPrefix("Claude is asking") == true
+            let askingQuestion: AIQuestion? = {
+                guard snapshot.transient?.sessionID == session.id,
+                      let q = snapshot.transient?.question else { return nil }
+                return q
+            }()
 
             let status: AITaskStatus
             if approval != nil {
                 status = .pendingApproval
-            } else if isAsking {
+            } else if askingQuestion != nil {
                 status = .askingQuestion
             } else if let lastTool = session.lastTool, !lastTool.isEmpty {
                 status = .working("\(lastTool)…")
@@ -119,9 +151,7 @@ final class AITaskRegistry: ObservableObject {
                 status: status,
                 lastActivityAt: session.lastEventAt,
                 currentApproval: approval,
-                currentQuestion: isAsking
-                    ? AIQuestion(text: snapshot.transient?.body ?? "", options: [])
-                    : nil
+                currentQuestion: askingQuestion
             )
         }
 

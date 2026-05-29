@@ -20,7 +20,7 @@ struct AIAskSection: View {
             // frame.
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text(question.text)
+                    questionText
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.leading)
@@ -54,6 +54,22 @@ struct AIAskSection: View {
             Spacer()
             BrowMascot(state: .working, size: 22)
         }
+    }
+
+    /// Renders the question text as Markdown when it parses cleanly, so
+    /// **bold**, `code`, and [links](url) come through. Falls back to
+    /// plain text on parse failure (e.g. unbalanced backticks). We use
+    /// `.inlineOnlyPreservingWhitespace` so the body collapses to a
+    /// single paragraph — block-level markdown (lists, headings) is left
+    /// to the future Plan Review section.
+    private var questionText: Text {
+        let options = AttributedString.MarkdownParsingOptions(
+            interpretedSyntax: .inlineOnlyPreservingWhitespace
+        )
+        if let attributed = try? AttributedString(markdown: question.text, options: options) {
+            return Text(attributed)
+        }
+        return Text(question.text)
     }
 
     private var optionsList: some View {

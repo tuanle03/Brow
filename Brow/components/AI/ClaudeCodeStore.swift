@@ -82,15 +82,19 @@ final class ClaudeCodeStore: ObservableObject {
         // question as a transient notification so the user knows to
         // switch to Claude Code to answer.
         if payload.toolName == "AskUserQuestion" {
+            // The hook contract only round-trips allow/deny — Claude
+            // Code's tool reads the user's actual answer from stdin in
+            // the terminal. Auto-allow so we don't block it; the toast
+            // we surface lets the user know what to type back.
             let decision: ApprovalDecision = .allow
             archive(approval, outcome: .decided(decision))
-            let questionText = Self.extractAskUserQuestionText(from: payload.toolInput ?? [:])
-            let body = questionText
-                .map { "Claude is asking: \($0)" }
+            let question = Self.parseAskUserQuestion(from: payload.toolInput ?? [:])
+            let body = question.map { "Claude is asking: \($0.text)" }
                 ?? "Claude is asking a question — answer in Claude Code."
             surfaceToast(.notification(body),
                          sessionID: payload.sessionID,
-                         projectDirectory: payload.projectDirectory)
+                         projectDirectory: payload.projectDirectory,
+                         question: question)
             return decision.hookOutputJSON(for: approval)
         }
 
@@ -284,6 +288,15 @@ final class ClaudeCodeStore: ObservableObject {
         transientNotification = nil
     }
 
+    /// Public side-door for non-hook callers (currently `TerminalJumpService`)
+    /// to drop a transient toast on the panel — e.g. "iTerm2 not running"
+    /// when a jump fails. Reuses the existing 5s auto-dismiss machinery.
+    func surfaceLocalNotice(_ message: String, sessionID: String? = nil) {
+        surfaceToast(.notification(message),
+                     sessionID: sessionID,
+                     projectDirectory: nil)
+    }
+
     private func touchSession(id: String?,
                               projectDirectory: String?,
                               terminalAppHint: String? = nil) {
@@ -322,17 +335,23 @@ final class ClaudeCodeStore: ObservableObject {
 
     private func surfaceToast(_ kind: TransientNotification.Kind,
                               sessionID: String?,
-                              projectDirectory: String?) {
+                              projectDirectory: String?,
+                              question: AIQuestion? = nil,
+                              autoDismissAfter seconds: TimeInterval = 5) {
         transientNotification = TransientNotification(
             id: UUID(),
             receivedAt: Date(),
             sessionID: sessionID,
             kind: kind,
-            projectDirectory: projectDirectory
+            projectDirectory: projectDirectory,
+            question: question
         )
         notificationDismissTask?.cancel()
+        // AskUserQuestion toasts hang around longer than plain toasts —
+        // the user is probably switching to the terminal to answer.
+        let duration = question == nil ? seconds : max(seconds, 30)
         notificationDismissTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(5))
+            try? await Task.sleep(for: .seconds(duration))
             await MainActor.run {
                 guard let self else { return }
                 if !Task.isCancelled { self.transientNotification = nil }
@@ -340,21 +359,44 @@ final class ClaudeCodeStore: ObservableObject {
         }
     }
 
-    /// Best-effort extraction of the prompt text from an `AskUserQuestion`
-    /// `tool_input`. Tries both the simple top-level `question` field and
-    /// Claude Code's structured `questions: [{ question, options }]`
-    /// schema. Returns nil if neither is present.
-    private static func extractAskUserQuestionText(from toolInput: [String: AnyJSON]) -> String? {
+    /// Decodes Claude Code's `AskUserQuestion` payload into a structured
+    /// `AIQuestion`. Supports both the simple `{ question: "..." }`
+    /// shape and the richer `{ questions: [{ question, options }] }`
+    /// shape — we pick the *first* sub-question of the latter, which is
+    /// what the CLI itself does. Each option is given a `K<n>` shortcut
+    /// label so the UI can render keyboard hints.
+    private static func parseAskUserQuestion(from toolInput: [String: AnyJSON]) -> AIQuestion? {
+        // Shape 1: top-level question string, no options.
         if case let .string(s)? = toolInput["question"], !s.isEmpty {
-            return s
+            return AIQuestion(text: s, options: [])
         }
-        if case let .array(arr)? = toolInput["questions"],
-           case let .object(q)? = arr.first,
-           case let .string(s)? = q["question"],
-           !s.isEmpty {
-            return s
+        // Shape 2: structured `questions: [{ question, options: [...] }]`.
+        guard case let .array(arr)? = toolInput["questions"],
+              case let .object(first)? = arr.first,
+              case let .string(text)? = first["question"],
+              !text.isEmpty
+        else { return nil }
+
+        var options: [AIQuestion.Option] = []
+        if case let .array(rawOptions)? = first["options"] {
+            for (index, raw) in rawOptions.enumerated() {
+                let label: String?
+                switch raw {
+                case .string(let s):
+                    label = s
+                case .object(let obj):
+                    // Some agents wrap each option in `{ label: "..." }`.
+                    if case let .string(s)? = obj["label"] { label = s }
+                    else if case let .string(s)? = obj["text"] { label = s }
+                    else { label = nil }
+                default:
+                    label = nil
+                }
+                guard let label, !label.isEmpty else { continue }
+                options.append(.init(id: "K\(index + 1)", label: label))
+            }
         }
-        return nil
+        return AIQuestion(text: text, options: options)
     }
 }
 
@@ -407,6 +449,10 @@ struct TransientNotification: Identifiable, Equatable {
     let sessionID: String?
     let kind: Kind
     let projectDirectory: String?
+    /// Populated when the toast is sourced from `AskUserQuestion`. The
+    /// panel uses presence of this field to switch into the Ask section
+    /// and render options instead of plain body text.
+    let question: AIQuestion?
 
     var title: String {
         switch kind {
