@@ -81,6 +81,7 @@ struct AIMonitorSection: View {
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 8)
+        .modifier(JumpOnTap(task: task))
     }
 
     private func collapsedRow(_ task: AITask) -> some View {
@@ -97,6 +98,7 @@ struct AIMonitorSection: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
+        .modifier(JumpOnTap(task: task))
     }
 
     private func tagPills(_ task: AITask) -> some View {
@@ -117,6 +119,43 @@ struct AIMonitorSection: View {
         case .done:                             return .approved
         case .idle:                             return .idle
         }
+    }
+}
+
+/// Makes the whole row area clickable as a hand-cursor button that fires
+/// `TerminalJumpService.jump(to:)`. Lifted into a modifier so both row
+/// styles share the same hit target, hover background, and tooltip.
+private struct JumpOnTap: ViewModifier {
+    let task: AITask
+    @State private var isHovering = false
+
+    func body(content: Content) -> some View {
+        content
+            .contentShape(Rectangle())
+            .background(
+                Rectangle()
+                    .fill(.white.opacity(isHovering ? 0.05 : 0))
+                    .allowsHitTesting(false)
+            )
+            .onHover { hovering in
+                isHovering = hovering
+                if hovering {
+                    NSCursor.pointingHand.push()
+                } else {
+                    NSCursor.pop()
+                }
+            }
+            .onTapGesture {
+                TerminalJumpService.jump(to: task)
+            }
+            .help(jumpHelpText)
+    }
+
+    private var jumpHelpText: String {
+        if let hint = task.terminalAppHint, !hint.isEmpty {
+            return "Jump to \(hint)"
+        }
+        return "No terminal recorded for this session"
     }
 }
 
