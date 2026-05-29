@@ -409,15 +409,66 @@ final class ClaudeCodeStore: ObservableObject {
         }
     }
 
-    /// Best-effort: return the foreground app's display name unless it's
-    /// Brow itself (e.g. user clicked the notch, then triggered a hook
-    /// indirectly — rare but possible). Used only as a UI hint; nothing
-    /// is round-tripped back to Claude Code.
+    /// Best-effort: return the foreground app's display name when it's a
+    /// known terminal or IDE — the kind of app Claude Code might actually
+    /// be running from. Skipped when:
+    ///  - the foreground is Brow itself (rare: user touched the notch)
+    ///  - the foreground is unrelated to coding (Finder, Safari, **iPhone
+    ///    Mirroring**, Messages, etc.) — the previous version would
+    ///    happily capture those and stick e.g. "iPhone Mirroring" as the
+    ///    terminal pill, which is worse than the generic "Terminal"
+    ///    fallback
+    /// Used only as a UI hint; nothing is round-tripped back to Claude
+    /// Code, so a miss just means the pill stays generic.
     private func captureTerminalAppHint() -> String? {
         guard let app = NSWorkspace.shared.frontmostApplication else { return nil }
         if app.bundleIdentifier == Bundle.main.bundleIdentifier { return nil }
+        guard let bundleID = app.bundleIdentifier,
+              Self.knownTerminalBundleIDs.contains(bundleID)
+        else { return nil }
         return app.localizedName
     }
+
+    /// Apps Brow recognises as plausible Claude Code launch points. Pure
+    /// terminal emulators come first, then IDEs with integrated terminals
+    /// where `claude` is often invoked. If your terminal isn't here the
+    /// pill just shows the generic "Terminal" label — a follow-up could
+    /// expose this as a `Defaults` array so users can extend the list.
+    private static let knownTerminalBundleIDs: Set<String> = [
+        // Native terminal emulators
+        "com.apple.Terminal",
+        "com.googlecode.iterm2",
+        "com.mitchellh.ghostty",
+        "dev.warp.Warp-Stable",
+        "dev.warp.Warp",
+        "org.alacritty",
+        "net.kovidgoyal.kitty",
+        "co.zeit.hyper",
+        "com.github.wez.wezterm",
+        "org.tabby",
+        "com.raphaelamorim.rio",
+        // IDEs with integrated terminals
+        "com.microsoft.VSCode",
+        "com.microsoft.VSCodeInsiders",
+        "com.vscodium",
+        "com.todesktop.230313mzl4w4u92", // Cursor
+        "com.apple.dt.Xcode",
+        "dev.zed.Zed",
+        "dev.zed.Zed-Preview",
+        "com.jetbrains.intellij",
+        "com.jetbrains.intellij.ce",
+        "com.jetbrains.WebStorm",
+        "com.jetbrains.PyCharm",
+        "com.jetbrains.PhpStorm",
+        "com.jetbrains.GoLand",
+        "com.jetbrains.AppCode",
+        "com.jetbrains.CLion",
+        "com.jetbrains.datagrip",
+        "com.jetbrains.rider",
+        "com.sublimetext.4",
+        "com.panic.Nova",
+        "io.neovide.neovide",
+    ]
 
     private func surfaceToast(_ kind: TransientNotification.Kind,
                               sessionID: String?,
