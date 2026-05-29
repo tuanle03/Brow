@@ -284,28 +284,15 @@ final class ClaudeCodeStore: ObservableObject {
     }
 
     func recordNotification(_ payload: NotificationPayload) {
+        // We still touch the session so the Monitor row reflects "Claude
+        // just talked", but we DROP the toast entirely. Every Notification
+        // payload Claude Code emits in practice is either a "Claude is
+        // waiting / needs permission" ping (immediately followed by a
+        // PermissionRequest that Approve already covers) or a duplicate
+        // of state already visible on the Monitor row. The debounce path
+        // we used to take couldn't distinguish them reliably and led to a
+        // toast-then-Approve flash.
         touchSession(id: payload.sessionID, projectDirectory: payload.projectDirectory)
-        // Defer the toast a beat — Claude Code's permission requests are
-        // preceded by a "Claude is waiting…" Notification, and we don't
-        // want both to flash before the approval card lands. If a real
-        // PermissionRequest comes in for this session within the debounce
-        // window, it cancels this task before the toast surfaces.
-        let key = payload.sessionID ?? UUID().uuidString
-        pendingNotificationTasks[key]?.cancel()
-        let message = payload.message
-        let sessionID = payload.sessionID
-        let projectDirectory = payload.projectDirectory
-        pendingNotificationTasks[key] = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(Self.notificationDebounce))
-            if Task.isCancelled { return }
-            await MainActor.run {
-                guard let self else { return }
-                self.pendingNotificationTasks.removeValue(forKey: key)
-                self.surfaceToast(.notification(message),
-                                  sessionID: sessionID,
-                                  projectDirectory: projectDirectory)
-            }
-        }
     }
 
     private func cancelPendingNotification(for sessionID: String) {
