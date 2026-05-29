@@ -142,6 +142,9 @@ final class ClaudeCodeBridge: ObservableObject {
             case .sessionEnd(let payload):
                 ClaudeCodeStore.shared.recordSessionEnd(payload)
                 return .ok(jsonBody: "{}")
+            case .userPromptSubmit(let payload):
+                ClaudeCodeStore.shared.recordUserPrompt(payload)
+                return .ok(jsonBody: "{}")
             case .permissionRequest(let payload):
                 // Suspends until the user decides in the notch, a saved
                 // rule matches, or the store's 55s timeout fires.

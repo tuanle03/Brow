@@ -20,6 +20,9 @@ enum ClaudeCodeHookInstaller {
     /// - `SessionStart` / `SessionEnd`: keep the Sessions list live, so the
     ///   notch knows Claude is running the instant a CLI session opens —
     ///   no waiting for the first permission prompt.
+    /// - `UserPromptSubmit`: fires every time the user types and submits a
+    ///   message. We use the latest one as the "You: …" subtitle in the
+    ///   Monitor row so the task list reads like a TODO list of asks.
     /// - `PermissionRequest`: only fires when Claude Code would otherwise
     ///   show its native permission dialog, so the notch UI mirrors the
     ///   CLI 1:1 (no double-prompting on auto-allowed tools).
@@ -28,10 +31,12 @@ enum ClaudeCodeHookInstaller {
     ///
     /// Install/uninstall sweep every hook key (not just these) for our
     /// command, so older Brow builds that wrote into `PreToolUse` get
-    /// cleaned up automatically on the next install.
+    /// cleaned up automatically on the next install. **Existing Brow users
+    /// need to re-run install for `UserPromptSubmit` to take effect.**
     static let coveredHooks: [String] = [
         "SessionStart",
         "SessionEnd",
+        "UserPromptSubmit",
         "PermissionRequest",
         "Notification",
         "Stop",
