@@ -108,20 +108,45 @@ struct AIApproveSection: View {
 
     @ViewBuilder
     private var preview: some View {
-        switch approval.toolName {
-        case "Bash":
-            // Long shell commands (e.g. multi-pipe one-liners) used to
-            // push the panel past the open notch height. Cap at 3 lines;
-            // the rest is reachable through the surrounding ScrollView.
-            codeBox(approval.toolInput["command"]?.asDisplayString ?? approval.targetDescription,
-                    maxLines: 3)
-        case "Edit":
+        // Resolve the per-tool primary text once and fall through to a
+        // generic key/value dump when it's empty. The dump is also what
+        // unknown tools land on (MCP tools, future Claude features) so
+        // the user always sees *something* — an empty code box on
+        // approve was the bug.
+        let body: String = {
+            switch approval.toolName {
+            case "Bash":  return approval.toolInput["command"]?.asDisplayString ?? ""
+            case "Write": return approval.toolInput["content"]?.asDisplayString ?? ""
+            default:      return approval.targetDescription
+            }
+        }()
+
+        if approval.toolName == "Edit" {
             editDiff
-        case "Write":
-            codeBox(approval.toolInput["content"]?.asDisplayString ?? "", maxLines: 5)
-        default:
-            codeBox(approval.targetDescription, maxLines: 3)
+        } else if !body.isEmpty {
+            codeBox(body, maxLines: approval.toolName == "Write" ? 5 : 3)
+        } else {
+            toolInputDump
         }
+    }
+
+    /// Last-resort preview: list every `tool_input` key + value so the
+    /// approval card never hands the user a blank Allow / Deny pair.
+    /// Used when the per-tool extraction returns empty (unknown MCP
+    /// tools, schema changes from Claude Code, malformed payloads).
+    private var toolInputDump: some View {
+        let keys = approval.toolInput.keys.sorted()
+        let lines: [String]
+        if keys.isEmpty {
+            lines = ["(no tool input)"]
+        } else {
+            lines = keys.map { key in
+                let value = approval.toolInput[key]?.asDisplayString ?? ""
+                let trimmed = value.count > 80 ? String(value.prefix(79)) + "…" : value
+                return "\(key): \(trimmed)"
+            }
+        }
+        return codeBox(lines.joined(separator: "\n"), maxLines: 6)
     }
 
     private func codeBox(_ text: String, maxLines: Int = 4) -> some View {
