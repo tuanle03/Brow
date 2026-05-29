@@ -33,7 +33,7 @@ struct AIApproveSection: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
-    // MARK: - Header (orange dot + status text + mascot)
+    // MARK: - Header (orange dot + status text + queue pill + mascot)
 
     private var header: some View {
         HStack(spacing: 8) {
@@ -43,9 +43,37 @@ struct AIApproveSection: View {
             Text("Permission Request")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white.opacity(0.7))
+            if queueTotal > 1 {
+                Text("\(queueIndex) of \(queueTotal)")
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+                    .background(
+                        Capsule().fill(Color(red: 1.0, green: 0.62, blue: 0.20).opacity(0.2))
+                    )
+                    .overlay(
+                        Capsule().stroke(Color(red: 1.0, green: 0.62, blue: 0.20).opacity(0.5),
+                                         lineWidth: 0.8)
+                    )
+            }
             Spacer()
             BrowMascot(state: .attention, size: 22)
         }
+    }
+
+    /// 1-based position of this approval in the registry's pending queue
+    /// (sorted newest-first by the registry). Lets the user see "I just
+    /// approved one but there are 2 more in line" instead of mistaking a
+    /// fresh request for the one they already resolved.
+    private var queueIndex: Int {
+        let pendingIDs = registry.tasks
+            .filter { $0.status == .pendingApproval }
+            .compactMap { $0.currentApproval?.id }
+        return (pendingIDs.firstIndex(of: approval.id) ?? 0) + 1
+    }
+
+    private var queueTotal: Int {
+        registry.tasks.filter { $0.status == .pendingApproval }.count
     }
 
     // MARK: - Tool name + target
