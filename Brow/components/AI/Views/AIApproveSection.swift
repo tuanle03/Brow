@@ -130,23 +130,31 @@ struct AIApproveSection: View {
         }
     }
 
-    /// Last-resort preview: list every `tool_input` key + value so the
-    /// approval card never hands the user a blank Allow / Deny pair.
-    /// Used when the per-tool extraction returns empty (unknown MCP
-    /// tools, schema changes from Claude Code, malformed payloads).
+    /// Last-resort preview: pretty-print the entire `tool_input` as JSON
+    /// so the user can see exactly which script / arguments the agent is
+    /// asking permission to run — even when our per-tool switch doesn't
+    /// know how to summarise the payload (unknown MCP tools, schema
+    /// changes from Claude Code, malformed Bash entries missing
+    /// `command`). The approval card never hands the user a blank Allow
+    /// / Deny pair.
     private var toolInputDump: some View {
-        let keys = approval.toolInput.keys.sorted()
-        let lines: [String]
-        if keys.isEmpty {
-            lines = ["(no tool input)"]
-        } else {
-            lines = keys.map { key in
-                let value = approval.toolInput[key]?.asDisplayString ?? ""
-                let trimmed = value.count > 80 ? String(value.prefix(79)) + "…" : value
-                return "\(key): \(trimmed)"
-            }
+        if approval.toolInput.isEmpty {
+            return AnyView(codeBox("(no tool input)", maxLines: 2))
         }
-        return codeBox(lines.joined(separator: "\n"), maxLines: 6)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        if let data = try? encoder.encode(approval.toolInput),
+           let pretty = String(data: data, encoding: .utf8)
+        {
+            return AnyView(codeBox(pretty, maxLines: 12))
+        }
+        // Final fallback if JSON encoding somehow fails — line per key.
+        let lines = approval.toolInput.keys.sorted().map { key in
+            let value = approval.toolInput[key]?.asDisplayString ?? ""
+            let trimmed = value.count > 80 ? String(value.prefix(79)) + "…" : value
+            return "\(key): \(trimmed)"
+        }
+        return AnyView(codeBox(lines.joined(separator: "\n"), maxLines: 8))
     }
 
     private func codeBox(_ text: String, maxLines: Int = 4) -> some View {
