@@ -64,7 +64,6 @@ final class ClaudeCodeStore: ObservableObject {
     /// matches, returns immediately. Otherwise enqueues the request and
     /// suspends until the user decides (or the bridge times us out).
     func handlePermissionRequest(_ payload: PermissionRequestPayload, rawJSON: String) async -> String {
-        updateSession(from: payload)
         // A Notification toast for the same session that fired in the
         // last ~800ms is almost certainly Claude Code's pre-permission
         // ping ("Claude is waiting / needs permission"). Drop it — the
@@ -85,6 +84,9 @@ final class ClaudeCodeStore: ObservableObject {
         )
 
         if let matched = matchRule(for: payload) {
+            // Saved-rule paths don't surface UI, so updateSession can run
+            // here without risking a Monitor flash.
+            updateSession(from: payload)
             return matched.hookOutputJSON(for: approval)
         }
 
@@ -105,6 +107,7 @@ final class ClaudeCodeStore: ObservableObject {
             let question = Self.parseAskUserQuestion(from: payload.toolInput ?? [:])
             let body = question.map { "Claude is asking: \($0.text)" }
                 ?? "Claude is asking a question — answer in Claude Code."
+            updateSession(from: payload)
             surfaceToast(.notification(body),
                          sessionID: payload.sessionID,
                          projectDirectory: payload.projectDirectory,
@@ -114,7 +117,20 @@ final class ClaudeCodeStore: ObservableObject {
 
         let decision = await withCheckedContinuation { (cont: CheckedContinuation<ApprovalDecision, Never>) in
             continuations[approval.id] = cont
+            // Order matters: append the pending approval *before* updating
+            // the session. The previous order ran updateSession first,
+            // which published a session whose `lastTool` projected through
+            // the registry as a Monitor row with "<tool>…" status. The
+            // notch opened on that Monitor frame and only switched into
+            // the Approve section once the second @Published — pending —
+            // landed, which read to the user as a "notification flash"
+            // before approve. Flipping the order keeps the registry in
+            // `.approve` mode from the very first projection (orphan
+            // pending is enough), and `updateSession` then rewrites the
+            // orphan into the proper session-backed task with no visual
+            // transition.
             pending.append(approval)
+            updateSession(from: payload)
             // Auto-fall back to .ask if the user hasn't decided in time.
             // Claude Code's hook script gives us 60s before its curl errors
             // out; bail at 55s so the response always makes it back.
