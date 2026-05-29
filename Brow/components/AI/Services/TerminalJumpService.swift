@@ -24,13 +24,25 @@ import Foundation
 @MainActor
 enum TerminalJumpService {
 
-    /// Try to activate the terminal that owns `task`. Safe to call from
-    /// any user action — no-ops when the hint is missing or the app
-    /// isn't running.
-    static func jump(to task: AITask) {
-        guard let hint = task.terminalAppHint, !hint.isEmpty else { return }
-        guard let app = findApp(matching: hint) else { return }
+    /// Try to activate the terminal that owns `task`. Plays a chiptune
+    /// confirmation on success and a failure tone + transient toast when
+    /// the captured terminal isn't running. Returns the outcome so
+    /// callers (UI tests, future automation) can branch on it.
+    @discardableResult
+    static func jump(to task: AITask) -> Bool {
+        guard let hint = task.terminalAppHint, !hint.isEmpty else {
+            ClaudeCodeStore.shared.surfaceLocalNotice("No terminal recorded for this session")
+            AISoundEffects.play(.jumpFailed)
+            return false
+        }
+        guard let app = findApp(matching: hint) else {
+            ClaudeCodeStore.shared.surfaceLocalNotice("\(hint) isn't running")
+            AISoundEffects.play(.jumpFailed)
+            return false
+        }
         activate(app)
+        AISoundEffects.play(.jump)
+        return true
     }
 
     // MARK: - Internals

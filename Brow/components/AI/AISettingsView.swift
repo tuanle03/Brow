@@ -1,3 +1,4 @@
+import Defaults
 import SwiftUI
 
 /// Debug + control surface for the AI Sessions feature.
@@ -5,7 +6,8 @@ import SwiftUI
 /// - Section 2: Claude Code hook installer (writes ~/.brow/hooks + edits
 ///   ~/.claude/settings.json), with sibling-hook warning if Masko or other
 ///   tools already own the same hook point.
-/// - Section 3: last received event payload, for end-to-end smoke testing.
+/// - Section 3: panel preferences (sound effects on/off).
+/// - Section 4: last received event payload, for end-to-end smoke testing.
 ///
 /// Future PRs reorganise this once the notch UI lands — for now the panel
 /// stays diagnostic-flavoured.
@@ -15,17 +17,38 @@ struct AISettingsView: View {
 
     @State private var installState: ClaudeCodeHookInstaller.InstallationState = .notInstalled
     @State private var hookError: String?
+    @Default(.aiSoundEffectsEnabled) private var soundEffectsEnabled
 
     var body: some View {
         Form {
             bridgeSection
             hooksSection
+            preferencesSection
             queueSection
             rulesSection
             lastEventSection
         }
         .formStyle(.grouped)
         .onAppear { refreshInstallState() }
+    }
+
+    // MARK: - Preferences
+
+    @ViewBuilder
+    private var preferencesSection: some View {
+        Section {
+            Toggle("Play sound effects", isOn: $soundEffectsEnabled)
+                .toggleStyle(.switch)
+                .onChange(of: soundEffectsEnabled) { _, newValue in
+                    // Preview the chosen sound so the user hears what
+                    // they're opting into — only when turning on.
+                    if newValue { AISoundEffects.play(.notification) }
+                }
+        } header: {
+            Text("Panel preferences")
+        } footer: {
+            Text("Plays a short macOS system sound when a permission request arrives, a notification toast pops, or a row is clicked.")
+        }
     }
 
     // MARK: - Bridge
