@@ -276,9 +276,26 @@ final class ClaudeCodeStore: ObservableObject {
             return last.isEmpty ? path : last
         }
 
+        // Some Claude Code versions / MCP tools nest the args under
+        // alternative keys. Bash in particular has been spotted with
+        // `cmd` and `script` in the wild.
+        func extractBashCommand() -> String {
+            for key in ["command", "cmd", "script"] {
+                if case let .string(s)? = toolInput[key], !s.isEmpty { return s }
+            }
+            for rootKey in ["input", "tool_input", "params"] {
+                if case let .object(inner)? = toolInput[rootKey] {
+                    for key in ["command", "cmd", "script"] {
+                        if case let .string(s)? = inner[key], !s.isEmpty { return s }
+                    }
+                }
+            }
+            return ""
+        }
+
         switch toolName {
         case "Bash":
-            let cmd = toolInput["command"]?.asDisplayString ?? ""
+            let cmd = extractBashCommand()
             return cmd.isEmpty ? "Bash" : short(cmd, max: 64)
         case "Edit":
             if let path = toolInput["file_path"]?.asDisplayString {

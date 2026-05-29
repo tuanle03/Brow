@@ -109,15 +109,32 @@ struct AIApproveSection: View {
     @ViewBuilder
     private var preview: some View {
         // Resolve the per-tool primary text once and fall through to a
-        // generic key/value dump when it's empty. The dump is also what
+        // generic JSON dump when it's empty. The dump is also what
         // unknown tools land on (MCP tools, future Claude features) so
         // the user always sees *something* — an empty code box on
         // approve was the bug.
+        //
+        // Bash gets a few extra fallbacks because we've seen schemas in
+        // the wild where the command lives under `cmd`/`script`/an inner
+        // `input` object instead of plain `command` at the top of
+        // `tool_input`. Same for Write's content field.
         let body: String = {
             switch approval.toolName {
-            case "Bash":  return approval.toolInput["command"]?.asDisplayString ?? ""
-            case "Write": return approval.toolInput["content"]?.asDisplayString ?? ""
-            default:      return approval.targetDescription
+            case "Bash":
+                return firstNonEmpty(
+                    approval.toolInput["command"]?.asDisplayString,
+                    approval.toolInput["cmd"]?.asDisplayString,
+                    approval.toolInput["script"]?.asDisplayString,
+                    nestedInputValue(for: ["command", "cmd", "script"])
+                )
+            case "Write":
+                return firstNonEmpty(
+                    approval.toolInput["content"]?.asDisplayString,
+                    approval.toolInput["text"]?.asDisplayString,
+                    nestedInputValue(for: ["content", "text"])
+                )
+            default:
+                return approval.targetDescription
             }
         }()
 
@@ -130,31 +147,82 @@ struct AIApproveSection: View {
         }
     }
 
+    /// Walks `tool_input.input` (and `tool_input.tool_input`) for keys
+    /// Claude Code's older hook variants used to nest tool args inside.
+    /// Returns the first non-empty match or nil.
+    private func nestedInputValue(for keys: [String]) -> String? {
+        let nestedRoots = ["input", "tool_input", "params"]
+        for rootKey in nestedRoots {
+            if case let .object(inner) = approval.toolInput[rootKey] {
+                for key in keys {
+                    if case let .string(s) = inner[key], !s.isEmpty { return s }
+                }
+            }
+        }
+        return nil
+    }
+
+    /// Picks the first non-nil, non-empty string from the given
+    /// candidates. Compresses the cascade of `?? ?? ??` we'd otherwise
+    /// repeat per tool.
+    private func firstNonEmpty(_ candidates: String?...) -> String {
+        for c in candidates {
+            if let c, !c.isEmpty { return c }
+        }
+        return ""
+    }
+
     /// Last-resort preview: pretty-print the entire `tool_input` as JSON
     /// so the user can see exactly which script / arguments the agent is
     /// asking permission to run — even when our per-tool switch doesn't
-    /// know how to summarise the payload (unknown MCP tools, schema
-    /// changes from Claude Code, malformed Bash entries missing
-    /// `command`). The approval card never hands the user a blank Allow
-    /// / Deny pair.
+    /// know how to summarise the payload. When `tool_input` is empty
+    /// (Claude Code wrapped the args differently than we expected) we
+    /// fall back further to the **raw hook JSON** — the whole payload
+    /// the bridge received — so debugging schema drift is possible
+    /// without leaving the notch.
     private var toolInputDump: some View {
-        if approval.toolInput.isEmpty {
+        // Prefer tool_input JSON when it has anything.
+        if !approval.toolInput.isEmpty {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+            if let data = try? encoder.encode(approval.toolInput),
+               let pretty = String(data: data, encoding: .utf8)
+            {
+                return AnyView(codeBox(pretty, maxLines: 12))
+            }
+            let lines = approval.toolInput.keys.sorted().map { key in
+                let value = approval.toolInput[key]?.asDisplayString ?? ""
+                let trimmed = value.count > 80 ? String(value.prefix(79)) + "…" : value
+                return "\(key): \(trimmed)"
+            }
+            return AnyView(codeBox(lines.joined(separator: "\n"), maxLines: 8))
+        }
+        // tool_input empty: dump the raw hook payload so the user (and
+        // we) can see what Claude Code actually sent. This is the
+        // schema-drift fallback — if a new Claude version moves the
+        // command into e.g. `parameters.command`, the rawJSON will show
+        // it and we can wire up the extractor.
+        let raw = approval.rawJSON.trimmingCharacters(in: .whitespacesAndNewlines)
+        if raw.isEmpty {
             return AnyView(codeBox("(no tool input)", maxLines: 2))
         }
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-        if let data = try? encoder.encode(approval.toolInput),
-           let pretty = String(data: data, encoding: .utf8)
-        {
-            return AnyView(codeBox(pretty, maxLines: 12))
-        }
-        // Final fallback if JSON encoding somehow fails — line per key.
-        let lines = approval.toolInput.keys.sorted().map { key in
-            let value = approval.toolInput[key]?.asDisplayString ?? ""
-            let trimmed = value.count > 80 ? String(value.prefix(79)) + "…" : value
-            return "\(key): \(trimmed)"
-        }
-        return AnyView(codeBox(lines.joined(separator: "\n"), maxLines: 8))
+        let pretty = Self.prettyPrintJSON(raw) ?? raw
+        return AnyView(codeBox(pretty, maxLines: 14))
+    }
+
+    /// Re-encode an arbitrary JSON string with `.prettyPrinted` so it
+    /// reads in the code box. Falls back to the original string when
+    /// the input isn't valid JSON.
+    private static func prettyPrintJSON(_ raw: String) -> String? {
+        guard let data = raw.data(using: .utf8),
+              let object = try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed]),
+              let prettyData = try? JSONSerialization.data(
+                  withJSONObject: object,
+                  options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+              ),
+              let pretty = String(data: prettyData, encoding: .utf8)
+        else { return nil }
+        return pretty
     }
 
     private func codeBox(_ text: String, maxLines: Int = 4) -> some View {
