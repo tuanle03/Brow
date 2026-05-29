@@ -209,12 +209,14 @@ class BrowViewModel: NSObject, ObservableObject {
         self.coordinator.sneakPeek.show = false
         self.edgeAutoOpenActive = false
 
-        // Set the current view to shelf if it contains files and the user enables openShelfByDefault
-        // Otherwise, if the user has not enabled openLastShelfByDefault, set the view to home
-    if !ShelfStateViewModel.shared.isEmpty && Defaults[.openShelfByDefault] {
+        // Shelf still wins when files are dropped in mid-session — that's
+        // a content-driven takeover, not a "default tab" choice. Every
+        // other tab is preserved across close/open so the user lands back
+        // where they left off (Monitor on the AI tab, the music view on
+        // .home, etc.) without needing the old `openLastTabByDefault`
+        // toggle.
+        if !ShelfStateViewModel.shared.isEmpty && Defaults[.openShelfByDefault] {
             coordinator.currentView = .shelf
-        } else if !coordinator.openLastTabByDefault {
-            coordinator.currentView = .home
         }
     }
 
