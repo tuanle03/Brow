@@ -233,13 +233,16 @@ final class AITaskRegistry: ObservableObject {
             ))
         }
 
-        // Pending / asking first (newest by receivedAt), then everything
-        // else by recency. Stable ordering keeps the highlighted row from
-        // jumping around as background tools fire.
+        // Actionable first (pendingApproval, askingQuestion) so the user
+        // never misses a prompt buried under stale sessions. Within each
+        // tier the most recently active task is at the top — strictly
+        // by `lastActivityAt`, so a `.working` session from 3 minutes
+        // ago no longer outranks an `.idle` one that just got a new
+        // user prompt.
         tasks.sort { lhs, rhs in
-            let lp = lhs.status.priority
-            let rp = rhs.status.priority
-            if lp != rp { return lp > rp }
+            let lActionable = lhs.status == .pendingApproval || lhs.status == .askingQuestion
+            let rActionable = rhs.status == .pendingApproval || rhs.status == .askingQuestion
+            if lActionable != rActionable { return lActionable }
             return lhs.lastActivityAt > rhs.lastActivityAt
         }
 
@@ -259,14 +262,8 @@ final class AITaskRegistry: ObservableObject {
 }
 
 private extension AITaskStatus {
-    /// Sort weight for the `tasks` list. Higher = more attention-grabbing.
-    var priority: Int {
-        switch self {
-        case .pendingApproval: return 4
-        case .askingQuestion:  return 3
-        case .working:         return 2
-        case .done:            return 1
-        case .idle:            return 0
-        }
-    }
+    // Sort uses a two-tier ordering now (actionable vs not, then by
+    // `lastActivityAt`) so a per-status weight is no longer needed.
+    // Leaving the file scoped to `private extension` keeps room for
+    // future per-status helpers without disturbing imports.
 }
