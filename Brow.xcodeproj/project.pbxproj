@@ -123,6 +123,7 @@
 		AF23C5F82FC952BE00654A89 /* AIMonitorSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF23C5F72FC952BE00654A89 /* AIMonitorSection.swift */; };
 		AF23C5FA2FC952E600654A89 /* AIApproveSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF23C5F92FC952E600654A89 /* AIApproveSection.swift */; };
 		AF23C5FC2FC952F900654A89 /* AIAskSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF23C5FB2FC952F900654A89 /* AIAskSection.swift */; };
+		AF23C5FF2FC95C9800654A89 /* TerminalJumpService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF23C5FE2FC95C9800654A89 /* TerminalJumpService.swift */; };
 		AF46429E2FC845850045D431 /* IdleLottieActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF46429D2FC845850045D431 /* IdleLottieActivity.swift */; };
 		B10348D92C74E56000475897 /* ConditionalModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10348D82C74E56000475897 /* ConditionalModifier.swift */; };
 		B10F84A32C6C9596009F3026 /* TestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10F84A22C6C9596009F3026 /* TestView.swift */; };
@@ -311,6 +312,7 @@
 		AF23C5F72FC952BE00654A89 /* AIMonitorSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIMonitorSection.swift; sourceTree = "<group>"; };
 		AF23C5F92FC952E600654A89 /* AIApproveSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIApproveSection.swift; sourceTree = "<group>"; };
 		AF23C5FB2FC952F900654A89 /* AIAskSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIAskSection.swift; sourceTree = "<group>"; };
+		AF23C5FE2FC95C9800654A89 /* TerminalJumpService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalJumpService.swift; sourceTree = "<group>"; };
 		AF46429D2FC845850045D431 /* IdleLottieActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleLottieActivity.swift; sourceTree = "<group>"; };
 		B10348D82C74E56000475897 /* ConditionalModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConditionalModifier.swift; sourceTree = "<group>"; };
 		B10F84A22C6C9596009F3026 /* TestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestView.swift; sourceTree = "<group>"; };
@@ -456,6 +458,7 @@
 				AF23C5EF2FC9526100654A89 /* Models */,
 				AF23C5F22FC9528600654A89 /* AITaskRegistry.swift */,
 				AF23C5F42FC952A900654A89 /* Views */,
+				AF23C5FD2FC95C9800654A89 /* Services */,
 			);
 			path = AI;
 			sourceTree = "<group>";
@@ -732,6 +735,14 @@
 				AF23C5FB2FC952F900654A89 /* AIAskSection.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		AF23C5FD2FC95C9800654A89 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				AF23C5FE2FC95C9800654A89 /* TerminalJumpService.swift */,
+			);
+			path = Services;
 			sourceTree = "<group>";
 		};
 		B141C23B2CA5F50900AC8CC8 /* Onboarding */ = {
@@ -1104,6 +1115,7 @@
 				B1F0A0022E60000100000001 /* BrightnessManager.swift in Sources */,
 				912304BF14946BA9A0077BB8 /* ClaudeCodeEvent.swift in Sources */,
 				C7DDB52001DBCD22DBD6425F /* ClaudeCodeBridge.swift in Sources */,
+				AF23C5FF2FC95C9800654A89 /* TerminalJumpService.swift in Sources */,
 				D26ACCCCB2D3A4BDDC700856 /* AISettingsView.swift in Sources */,
 				D35FE994D92D4D4E9E8A7880 /* ClaudeCodeHookInstaller.swift in Sources */,
 				F2857591B33CD27086D05868 /* ClaudeCodeStore.swift in Sources */,
