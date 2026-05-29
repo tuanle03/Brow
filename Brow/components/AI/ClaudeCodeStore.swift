@@ -223,9 +223,12 @@ final class ClaudeCodeStore: ObservableObject {
     private func updateSession(from payload: PermissionRequestPayload) {
         guard let id = payload.sessionID else { return }
         let now = Date()
+        let activity = Self.formatToolActivity(toolName: payload.toolName,
+                                               toolInput: payload.toolInput ?? [:])
         if var existing = sessions[id] {
             existing.lastEventAt = now
             existing.lastTool = payload.toolName
+            existing.lastToolActivity = activity
             existing.projectDirectory = payload.projectDirectory ?? existing.projectDirectory
             sessions[id] = existing
         } else {
@@ -236,8 +239,66 @@ final class ClaudeCodeStore: ObservableObject {
                 lastTool: payload.toolName,
                 projectDirectory: payload.projectDirectory ?? payload.cwd,
                 lastUserPrompt: nil,
-                terminalAppHint: captureTerminalAppHint()
+                terminalAppHint: captureTerminalAppHint(),
+                lastToolActivity: activity
             )
+        }
+    }
+
+    /// Builds the short, human-readable string the Monitor row shows for
+    /// the most recent tool call. Per-tool because each tool puts its
+    /// "what's actually happening" data under a different key, and
+    /// we want the verb + a tight target (file basename, command head)
+    /// so the row reads like a status line.
+    static func formatToolActivity(toolName: String,
+                                   toolInput: [String: AnyJSON]) -> String? {
+        func short(_ s: String, max: Int = 56) -> String {
+            guard s.count > max else { return s }
+            return String(s.prefix(max - 1)) + "…"
+        }
+        func basename(_ path: String) -> String {
+            let last = (path as NSString).lastPathComponent
+            return last.isEmpty ? path : last
+        }
+
+        switch toolName {
+        case "Bash":
+            let cmd = toolInput["command"]?.asDisplayString ?? ""
+            return cmd.isEmpty ? "Bash" : short(cmd, max: 64)
+        case "Edit":
+            if let path = toolInput["file_path"]?.asDisplayString {
+                return "Editing \(basename(path))"
+            }
+            return "Editing"
+        case "Write":
+            if let path = toolInput["file_path"]?.asDisplayString {
+                return "Writing \(basename(path))"
+            }
+            return "Writing"
+        case "Read":
+            if let path = toolInput["file_path"]?.asDisplayString {
+                return "Reading \(basename(path))"
+            }
+            return "Reading"
+        case "Grep":
+            if let p = toolInput["pattern"]?.asDisplayString { return "Searching \(short(p, max: 32))" }
+            return "Searching"
+        case "Glob":
+            if let p = toolInput["pattern"]?.asDisplayString { return "Listing \(short(p, max: 32))" }
+            return "Listing"
+        case "WebFetch":
+            if let url = toolInput["url"]?.asDisplayString { return "Fetching \(short(url, max: 40))" }
+            return "Fetching"
+        case "WebSearch":
+            if let q = toolInput["query"]?.asDisplayString { return "Searching the web for \(short(q, max: 36))" }
+            return "Searching the web"
+        case "TodoWrite":
+            return "Updating todos"
+        case "Task":
+            if let desc = toolInput["description"]?.asDisplayString { return "Subagent: \(short(desc, max: 40))" }
+            return "Running subagent"
+        default:
+            return toolName
         }
     }
 
@@ -278,7 +339,8 @@ final class ClaudeCodeStore: ObservableObject {
                 lastTool: nil,
                 projectDirectory: payload.cwd,
                 lastUserPrompt: trimmed,
-                terminalAppHint: captureTerminalAppHint()
+                terminalAppHint: captureTerminalAppHint(),
+                lastToolActivity: nil
             )
         }
     }
@@ -341,7 +403,8 @@ final class ClaudeCodeStore: ObservableObject {
                 lastTool: nil,
                 projectDirectory: projectDirectory,
                 lastUserPrompt: nil,
-                terminalAppHint: terminalAppHint
+                terminalAppHint: terminalAppHint,
+                lastToolActivity: nil
             )
         }
     }
@@ -539,6 +602,14 @@ struct SessionState: Identifiable, Equatable {
     /// at when Claude Code printed its first banner. nil when we couldn't
     /// determine the app or Brow itself was foreground.
     var terminalAppHint: String?
+    /// Human-readable description of the most recent tool call (e.g.
+    /// "Editing middleware.ts", "git push origin main", "Reading
+    /// config.json"). Computed from the PermissionRequest payload —
+    /// formats vary per tool so Monitor doesn't have to know the schema.
+    /// We don't yet wire a PostToolUse hook so "most recent" can mean
+    /// "currently running" rather than strictly "just finished"; close
+    /// enough for the panel's intent of showing what AI is up to.
+    var lastToolActivity: String?
 }
 
 enum ApprovalDecision: Equatable {

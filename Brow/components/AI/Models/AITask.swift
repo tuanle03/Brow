@@ -20,6 +20,11 @@ struct AITask: Identifiable, Equatable {
     /// ("You: fix the auth bug in middleware"). nil until the first
     /// UserPromptSubmit hook fires (PR B).
     let userPrompt: String?
+    /// Human-readable verb + target for the most recent tool call
+    /// ("Editing middleware.ts", "git push origin main"). Drives the
+    /// Monitor row's subtitle in preference to userPrompt — what the AI
+    /// is doing is the more useful signal than what the user just typed.
+    let lastToolActivity: String?
     let status: AITaskStatus
     let lastActivityAt: Date
     /// Set when `status == .pendingApproval` so the Approve section can
