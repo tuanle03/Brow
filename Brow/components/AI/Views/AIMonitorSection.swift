@@ -59,7 +59,18 @@ struct AIMonitorSection: View {
                     .foregroundStyle(.white)
                     .lineLimit(1)
 
-                if let prompt = task.userPrompt, !prompt.isEmpty {
+                // Prefer "what AI is doing" over "what user just typed"
+                // — short answers like "yes" / "Indigo / Violet" used to
+                // dominate the row and read like the user's own echo.
+                // Falls back to userPrompt only when no tool activity is
+                // recorded yet (brand-new session).
+                if let activity = task.lastToolActivity, !activity.isEmpty {
+                    Text(activity)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.7))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                } else if let prompt = task.userPrompt, !prompt.isEmpty {
                     Text("You: \(prompt)")
                         .font(.system(size: 11))
                         .foregroundStyle(.white.opacity(0.55))
@@ -160,15 +171,19 @@ private struct JumpOnTap: ViewModifier {
 }
 
 private extension AITask {
-    /// First line of the row. Until `UserPromptSubmit` data is wired
-    /// (PR B) we fall back to the project folder name so each row still
-    /// gets a unique, meaningful label.
+    /// First line of the row. Prefer the project folder name — it stays
+    /// stable across the whole session and reads like a real label
+    /// ("Brow", "api-server"). The user's last prompt was the previous
+    /// choice but it was too volatile: a short answer like "yes" or
+    /// "Indigo / Violet" took over the row whenever the user replied to
+    /// Claude. The activity subtitle (lastToolActivity) now carries the
+    /// "what's happening" signal so the title doesn't need to.
     var titleLine: String {
+        if let dir = projectDirectory, !dir.isEmpty {
+            return (dir as NSString).lastPathComponent
+        }
         if let prompt = userPrompt, !prompt.isEmpty {
             return prompt.firstNonEmptyLine ?? prompt
-        }
-        if let dir = projectDirectory {
-            return (dir as NSString).lastPathComponent
         }
         if let id = sessionID { return String(id.prefix(8)) }
         return "Session"
@@ -198,7 +213,8 @@ private extension String {
             projectDirectory: "/Users/x/projects/Brow",
             terminalAppHint: "iTerm",
             userPrompt: "fix the auth bug in middleware",
-            status: .working("Writing middleware.ts"),
+            lastToolActivity: "Editing middleware.ts",
+            status: .working("Editing…"),
             lastActivityAt: Date().addingTimeInterval(-1620),
             currentApproval: nil,
             currentQuestion: nil
@@ -210,6 +226,7 @@ private extension String {
             projectDirectory: "/Users/x/projects/api-server",
             terminalAppHint: "Terminal",
             userPrompt: nil,
+            lastToolActivity: "git push origin main",
             status: .working(nil),
             lastActivityAt: Date().addingTimeInterval(-3600),
             currentApproval: nil,
@@ -222,6 +239,7 @@ private extension String {
             projectDirectory: "/Users/x/projects/docs",
             terminalAppHint: "Ghostty",
             userPrompt: nil,
+            lastToolActivity: nil,
             status: .done(nil),
             lastActivityAt: Date().addingTimeInterval(-18_000),
             currentApproval: nil,

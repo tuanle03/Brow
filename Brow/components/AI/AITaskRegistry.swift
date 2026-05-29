@@ -148,6 +148,7 @@ final class AITaskRegistry: ObservableObject {
                 projectDirectory: session.projectDirectory,
                 terminalAppHint: session.terminalAppHint,
                 userPrompt: session.lastUserPrompt,
+                lastToolActivity: session.lastToolActivity,
                 status: status,
                 lastActivityAt: session.lastEventAt,
                 currentApproval: approval,
@@ -168,6 +169,10 @@ final class AITaskRegistry: ObservableObject {
                 projectDirectory: approval.projectDirectory,
                 terminalAppHint: nil,
                 userPrompt: nil,
+                lastToolActivity: ClaudeCodeStore.formatToolActivity(
+                    toolName: approval.toolName,
+                    toolInput: approval.toolInput
+                ),
                 status: .pendingApproval,
                 lastActivityAt: approval.receivedAt,
                 currentApproval: approval,

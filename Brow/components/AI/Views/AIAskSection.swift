@@ -114,6 +114,7 @@ struct AIAskSection: View {
             projectDirectory: "/Users/x/projects/Brow",
             terminalAppHint: "iTerm",
             userPrompt: nil,
+            lastToolActivity: nil,
             status: .askingQuestion,
             lastActivityAt: Date(),
             currentApproval: nil,
