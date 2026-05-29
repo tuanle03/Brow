@@ -125,6 +125,7 @@
 		AF23C5FC2FC952F900654A89 /* AIAskSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF23C5FB2FC952F900654A89 /* AIAskSection.swift */; };
 		AF23C5FF2FC95C9800654A89 /* TerminalJumpService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF23C5FE2FC95C9800654A89 /* TerminalJumpService.swift */; };
 		AF23C6012FC95D6300654A89 /* AISoundEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF23C6002FC95D6300654A89 /* AISoundEffects.swift */; };
+		AF23C6192FC97A7800654A89 /* AILiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF23C6182FC97A7800654A89 /* AILiveActivity.swift */; };
 		AF46429E2FC845850045D431 /* IdleLottieActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF46429D2FC845850045D431 /* IdleLottieActivity.swift */; };
 		B10348D92C74E56000475897 /* ConditionalModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10348D82C74E56000475897 /* ConditionalModifier.swift */; };
 		B10F84A32C6C9596009F3026 /* TestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10F84A22C6C9596009F3026 /* TestView.swift */; };
@@ -315,6 +316,7 @@
 		AF23C5FB2FC952F900654A89 /* AIAskSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIAskSection.swift; sourceTree = "<group>"; };
 		AF23C5FE2FC95C9800654A89 /* TerminalJumpService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalJumpService.swift; sourceTree = "<group>"; };
 		AF23C6002FC95D6300654A89 /* AISoundEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AISoundEffects.swift; sourceTree = "<group>"; };
+		AF23C6182FC97A7800654A89 /* AILiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AILiveActivity.swift; sourceTree = "<group>"; };
 		AF46429D2FC845850045D431 /* IdleLottieActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleLottieActivity.swift; sourceTree = "<group>"; };
 		B10348D82C74E56000475897 /* ConditionalModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConditionalModifier.swift; sourceTree = "<group>"; };
 		B10F84A22C6C9596009F3026 /* TestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestView.swift; sourceTree = "<group>"; };
@@ -828,6 +830,7 @@
 				14E9FEA92C70BF610062E83F /* DownloadView.swift */,
 				B172AABF2C95DA0B001623F1 /* InlineHUD.swift */,
 				AF46429D2FC845850045D431 /* IdleLottieActivity.swift */,
+				AF23C6182FC97A7800654A89 /* AILiveActivity.swift */,
 			);
 			path = "Live activities";
 			sourceTree = "<group>";
@@ -1033,6 +1036,7 @@
 				1113ABC52E80E27000EC13B2 /* ShelfItemView.swift in Sources */,
 				1113ABC62E80E27000EC13B2 /* ShelfPersistenceService.swift in Sources */,
 				1113ABC82E80E27000EC13B2 /* ShelfItem.swift in Sources */,
+				AF23C6192FC97A7800654A89 /* AILiveActivity.swift in Sources */,
 				1113ABCA2E80E27000EC13B2 /* ShelfSelectionModel.swift in Sources */,
 				1113ABCB2E80E27000EC13B2 /* QuickLookService.swift in Sources */,
 				1113ABCC2E80E27000EC13B2 /* ShelfDropService.swift in Sources */,

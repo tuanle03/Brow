@@ -309,6 +309,13 @@ struct ContentView: View {
                       } else if coordinator.sneakPeek.show && Defaults[.inlineHUD] && (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && vm.notchState == .closed {
                           InlineHUD(type: $coordinator.sneakPeek.type, value: $coordinator.sneakPeek.value, icon: $coordinator.sneakPeek.icon, hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
                               .transition(.opacity)
+                      } else if !coordinator.expandingView.show && vm.notchState == .closed && coordinator.currentView == .ai && !vm.hideOnClosed {
+                          // AI tab selected — closed notch reflects what
+                          // the user was viewing, just like the music
+                          // branch below does for the home tab. Mascot
+                          // state + badge come from AITaskRegistry.
+                          AILiveActivity(vm: vm)
+                              .frame(alignment: .center)
                       } else if (!coordinator.expandingView.show || coordinator.expandingView.type == .music) && vm.notchState == .closed && (musicManager.isPlaying || !musicManager.isPlayerIdle) && coordinator.musicLiveActivityEnabled && !vm.hideOnClosed {
                           MusicLiveActivity()
                               .frame(alignment: .center)
