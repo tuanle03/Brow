@@ -11,6 +11,7 @@ import Foundation
 enum ClaudeCodeEvent: Equatable {
     case sessionStart(SessionStartPayload)
     case sessionEnd(SessionEndPayload)
+    case userPromptSubmit(UserPromptSubmitPayload)
     case permissionRequest(PermissionRequestPayload)
     case notification(NotificationPayload)
     case stop(StopPayload)
@@ -20,6 +21,7 @@ enum ClaudeCodeEvent: Equatable {
         switch self {
         case .sessionStart:      return "SessionStart"
         case .sessionEnd:        return "SessionEnd"
+        case .userPromptSubmit:  return "UserPromptSubmit"
         case .permissionRequest: return "PermissionRequest"
         case .notification:      return "Notification"
         case .stop:              return "Stop"
@@ -175,6 +177,22 @@ struct SessionEndPayload: Codable, Equatable {
     }
 }
 
+/// Fires every time the user submits a prompt to Claude Code. Brow uses
+/// the latest prompt as the "You: …" subtitle in the Monitor row so the
+/// task list reads like a TODO list of asks. Only the text is meaningful
+/// for us; we don't echo anything back to Claude.
+struct UserPromptSubmitPayload: Codable, Equatable {
+    let sessionID: String?
+    let prompt: String
+    let cwd: String?
+
+    enum CodingKeys: String, CodingKey {
+        case sessionID = "session_id"
+        case prompt
+        case cwd
+    }
+}
+
 /// Fires when Claude finishes its response and yields back to the user.
 /// Claude Code does not include a user-facing message here, so the toast
 /// Brow shows is generic ("Claude is done"). `cwd` lets us label the toast
@@ -279,6 +297,12 @@ struct ClaudeCodeIncomingEvent {
         case "SessionEnd":
             if let payload = try? decoder.decode(SessionEndPayload.self, from: data) {
                 event = .sessionEnd(payload)
+            } else {
+                event = .unknown(name: name, rawJSON: rawString)
+            }
+        case "UserPromptSubmit":
+            if let payload = try? decoder.decode(UserPromptSubmitPayload.self, from: data) {
+                event = .userPromptSubmit(payload)
             } else {
                 event = .unknown(name: name, rawJSON: rawString)
             }

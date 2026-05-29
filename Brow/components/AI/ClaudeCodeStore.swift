@@ -216,18 +216,53 @@ final class ClaudeCodeStore: ObservableObject {
                 firstSeenAt: now,
                 lastEventAt: now,
                 lastTool: payload.toolName,
-                projectDirectory: payload.projectDirectory ?? payload.cwd
+                projectDirectory: payload.projectDirectory ?? payload.cwd,
+                lastUserPrompt: nil,
+                terminalAppHint: captureTerminalAppHint()
             )
         }
     }
 
     func recordSessionStart(_ payload: SessionStartPayload) {
-        touchSession(id: payload.sessionID, projectDirectory: payload.projectDirectory ?? payload.cwd)
+        // Capture the terminal app the user is looking at right now —
+        // best-effort signal for "where was Claude Code launched from".
+        // touchSession only fills hint when creating, never overwrites.
+        touchSession(
+            id: payload.sessionID,
+            projectDirectory: payload.projectDirectory ?? payload.cwd,
+            terminalAppHint: captureTerminalAppHint()
+        )
     }
 
     func recordSessionEnd(_ payload: SessionEndPayload) {
         guard let id = payload.sessionID else { return }
         sessions.removeValue(forKey: id)
+    }
+
+    /// Stores the latest user prompt against the session, so the Monitor row
+    /// can render "You: <prompt>" as the task description. Only the most
+    /// recent prompt is kept — the task list mirrors "what is Claude
+    /// currently working on" not "what was historically asked".
+    func recordUserPrompt(_ payload: UserPromptSubmitPayload) {
+        guard let id = payload.sessionID else { return }
+        let trimmed = payload.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let now = Date()
+        if var existing = sessions[id] {
+            existing.lastEventAt = now
+            existing.lastUserPrompt = trimmed
+            sessions[id] = existing
+        } else {
+            sessions[id] = SessionState(
+                id: id,
+                firstSeenAt: now,
+                lastEventAt: now,
+                lastTool: nil,
+                projectDirectory: payload.cwd,
+                lastUserPrompt: trimmed,
+                terminalAppHint: captureTerminalAppHint()
+            )
+        }
     }
 
     func recordNotification(_ payload: NotificationPayload) {
@@ -249,11 +284,18 @@ final class ClaudeCodeStore: ObservableObject {
         transientNotification = nil
     }
 
-    private func touchSession(id: String?, projectDirectory: String?) {
+    private func touchSession(id: String?,
+                              projectDirectory: String?,
+                              terminalAppHint: String? = nil) {
         guard let id else { return }
         let now = Date()
         if var existing = sessions[id] {
             existing.lastEventAt = now
+            // Don't overwrite a hint once captured — the first sighting
+            // (at SessionStart) is the most reliable.
+            if existing.terminalAppHint == nil, let hint = terminalAppHint {
+                existing.terminalAppHint = hint
+            }
             sessions[id] = existing
         } else {
             sessions[id] = SessionState(
@@ -261,9 +303,21 @@ final class ClaudeCodeStore: ObservableObject {
                 firstSeenAt: now,
                 lastEventAt: now,
                 lastTool: nil,
-                projectDirectory: projectDirectory
+                projectDirectory: projectDirectory,
+                lastUserPrompt: nil,
+                terminalAppHint: terminalAppHint
             )
         }
+    }
+
+    /// Best-effort: return the foreground app's display name unless it's
+    /// Brow itself (e.g. user clicked the notch, then triggered a hook
+    /// indirectly — rare but possible). Used only as a UI hint; nothing
+    /// is round-tripped back to Claude Code.
+    private func captureTerminalAppHint() -> String? {
+        guard let app = NSWorkspace.shared.frontmostApplication else { return nil }
+        if app.bundleIdentifier == Bundle.main.bundleIdentifier { return nil }
+        return app.localizedName
     }
 
     private func surfaceToast(_ kind: TransientNotification.Kind,
@@ -405,6 +459,17 @@ struct SessionState: Identifiable, Equatable {
     var lastEventAt: Date
     var lastTool: String?
     var projectDirectory: String?
+    /// Most recent user prompt submitted in this session. Populated by the
+    /// `UserPromptSubmit` hook. Drives the "You: …" subtitle in the Monitor
+    /// row so the panel reads like a TODO list of asks.
+    var lastUserPrompt: String?
+    /// Best-effort name of the terminal app the session was launched from
+    /// (e.g. "iTerm2", "Ghostty"). Captured at SessionStart by sampling
+    /// `NSWorkspace.frontmostApplication` — the hook payload doesn't
+    /// include this so we infer it from whatever app the user was looking
+    /// at when Claude Code printed its first banner. nil when we couldn't
+    /// determine the app or Brow itself was foreground.
+    var terminalAppHint: String?
 }
 
 enum ApprovalDecision: Equatable {

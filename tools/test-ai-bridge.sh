@@ -11,11 +11,13 @@
 #   ./tools/test-ai-bridge.sh bash                    # Bash Permission Request
 #   ./tools/test-ai-bridge.sh edit                    # Edit Permission Request (with diff)
 #   ./tools/test-ai-bridge.sh write                   # Write Permission Request
+#   ./tools/test-ai-bridge.sh user-prompt "what you want Claude to do"
+#                                                    # UserPromptSubmit
 #   ./tools/test-ai-bridge.sh notification            # Toast
 #   ./tools/test-ai-bridge.sh ask                     # AskUserQuestion
 #   ./tools/test-ai-bridge.sh stop                    # Claude is done
 #   ./tools/test-ai-bridge.sh session-end             # close session
-#   ./tools/test-ai-bridge.sh all                     # session-start + bash + edit + stop + session-end
+#   ./tools/test-ai-bridge.sh all                     # session-start + prompt + bash + edit + stop + session-end
 #
 # Notes:
 # - `bash`, `edit`, `write` block until you click Allow/Deny in the notch
@@ -144,6 +146,24 @@ JSON
     )"
 }
 
+user_prompt() {
+    local prompt="${2:-fix the auth bug in middleware}"
+    bold "UserPromptSubmit"
+    gray "Prompt: $prompt"
+    # Escape backslashes and double quotes for embedding in JSON
+    local escaped
+    escaped=$(printf '%s' "$prompt" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
+    post "UserPromptSubmit" "$(cat <<JSON
+{
+  "hook_event_name": "UserPromptSubmit",
+  "session_id": "$SID",
+  "cwd": "$CWD",
+  "prompt": $escaped
+}
+JSON
+    )"
+}
+
 notification() {
     bold "Notification"
     post "Notification" "$(cat <<JSON
@@ -210,13 +230,15 @@ run_all() {
     health || exit 1
     echo
     session_start; echo
-    sleep 0.5
+    sleep 0.3
+    user_prompt all "build a login screen with email + password"; echo
+    sleep 0.3
     permission_bash; echo
-    sleep 0.5
+    sleep 0.3
     permission_edit; echo
-    sleep 0.5
+    sleep 0.3
     stop_event; echo
-    sleep 0.5
+    sleep 0.3
     session_end
 }
 
@@ -227,6 +249,7 @@ Usage: $0 <scenario>
 Scenarios:
   health           Ping the bridge (GET /healthz)
   session-start    Open a fake Claude Code session
+  user-prompt "…"  UserPromptSubmit — sets the "You: …" subtitle
   bash             Bash PermissionRequest (blocks until you decide)
   edit             Edit PermissionRequest with diff (blocks)
   write            Write PermissionRequest (blocks)
@@ -249,6 +272,7 @@ EOF
 case "${1:-}" in
     health)         health ;;
     session-start)  session_start ;;
+    user-prompt)    user_prompt "$@" ;;
     bash)           permission_bash ;;
     edit)           permission_edit ;;
     write)          permission_write ;;
