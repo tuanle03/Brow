@@ -25,6 +25,13 @@ final class AITaskRegistry: ObservableObject {
     private var previousPendingIDs: Set<UUID> = []
     private var previousTransientID: UUID?
     private var hasPerformedInitialRefresh = false
+    /// Time until which the panel should stay in `.monitor` regardless of
+    /// the pending queue — set briefly after every `decide(_:as:)` so the
+    /// user always sees "ack + what AI is doing now" between back-to-back
+    /// approvals instead of the next prompt slamming into the same slot.
+    private var monitorHoldUntil: Date?
+    private var monitorHoldClearTask: Task<Void, Never>?
+    private static let monitorHoldDuration: TimeInterval = 1.4
 
     private init() {
         self.store = ClaudeCodeStore.shared
@@ -36,9 +43,32 @@ final class AITaskRegistry: ObservableObject {
 
     /// Resolve the approval the panel is currently surfacing. Convenience
     /// wrapper around `ClaudeCodeStore.decide` — the registry doesn't own
-    /// continuations.
+    /// continuations. Also arms the monitor-hold so the next refresh
+    /// shows Monitor briefly before any queued approval slides in.
     func decide(_ approvalID: UUID, as decision: ApprovalDecision) {
         store.decide(approvalID, as: decision)
+        armMonitorHold()
+    }
+
+    /// Force the panel into `.monitor` for `monitorHoldDuration` seconds.
+    /// Cancellable when chained (multiple rapid decisions just extend the
+    /// hold). After the hold expires we re-`refresh` so a queued pending
+    /// can take the panel back into `.approve`.
+    private func armMonitorHold() {
+        monitorHoldUntil = Date().addingTimeInterval(Self.monitorHoldDuration)
+        monitorHoldClearTask?.cancel()
+        monitorHoldClearTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Self.monitorHoldDuration))
+            await MainActor.run {
+                guard let self else { return }
+                if Task.isCancelled { return }
+                self.monitorHoldUntil = nil
+                self.refresh()
+            }
+        }
+        // Force an immediate projection so the panel switches to Monitor
+        // on the same frame the user clicked.
+        refresh()
     }
 
     func dismissTransientNotification() {
@@ -70,7 +100,8 @@ final class AITaskRegistry: ObservableObject {
             sessions: store.sessions,
             transient: store.transientNotification
         )
-        let projected = Self.project(snapshot)
+        let inMonitorHold = (monitorHoldUntil ?? .distantPast) > Date()
+        let projected = Self.project(snapshot, forceMonitor: inMonitorHold)
         tasks = projected.tasks
         displayMode = projected.mode
         playSoundsForTransitions(snapshot: snapshot)
@@ -113,8 +144,10 @@ final class AITaskRegistry: ObservableObject {
 
     /// Fold the store snapshot into ordered `AITask`s + the panel mode.
     /// Pure function — easy to unit-test once we add tests for the
-    /// registry.
-    private static func project(_ snapshot: Snapshot) -> Projection {
+    /// registry. `forceMonitor` overrides the priority chain so a brief
+    /// post-decision hold can stop a queued approval from slamming into
+    /// the slot the user just resolved.
+    private static func project(_ snapshot: Snapshot, forceMonitor: Bool = false) -> Projection {
         // Build a task per known session. Sessions are the source of
         // truth for "what's running"; pending approvals and the transient
         // toast attach to a session via `sessionID`.
@@ -186,7 +219,9 @@ final class AITaskRegistry: ObservableObject {
         }
 
         let mode: AIPanelMode
-        if let approving = tasks.first(where: { $0.status == .pendingApproval }) {
+        if forceMonitor {
+            mode = .monitor
+        } else if let approving = tasks.first(where: { $0.status == .pendingApproval }) {
             mode = .approve(taskID: approving.id)
         } else if let asking = tasks.first(where: { $0.status == .askingQuestion }) {
             mode = .ask(taskID: asking.id)
