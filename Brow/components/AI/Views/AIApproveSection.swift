@@ -12,52 +12,66 @@ struct AIApproveSection: View {
     private var registry: AITaskRegistry { .shared }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            header
-            toolLine
-            // Preview can be long (multi-line command, big diff). Wrap it
-            // in a flexible ScrollView so the panel never grows past the
-            // open notch container and clips the notch shape at the top.
-            // Header + tool line stay pinned, buttons stay accessible.
+        VStack(alignment: .leading, spacing: 8) {
+            // Header collapses Permission Request + the tool name + the
+            // queue pill into a single row. The previous two-row layout
+            // ate ~60pt of the open notch's 240pt — too much when the
+            // preview body needs to show a Bash command or a JSON dump.
+            compactHeader
+            // Preview can be long (multi-line command, big diff). Wrap
+            // it in a ScrollView with layoutPriority so it claims the
+            // remaining vertical space *before* the action row, never
+            // collapses to zero, and content scrolls when oversized.
             ScrollView(.vertical, showsIndicators: false) {
                 preview
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(maxHeight: .infinity)
+            .layoutPriority(1)
             .scrollBounceBehavior(.basedOnSize)
 
             actionRow
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
-    // MARK: - Header (orange dot + status text + queue pill + mascot)
+    // MARK: - Header (orange dot + tool name + queue pill + mascot, one row)
 
-    private var header: some View {
+    private var compactHeader: some View {
         HStack(spacing: 8) {
             Circle()
                 .fill(Color(red: 1.0, green: 0.62, blue: 0.20))
                 .frame(width: 7, height: 7)
-            Text("Permission Request")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.white.opacity(0.7))
+            Image(systemName: toolSymbol)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(toolTint)
+            Text(approval.toolName)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
+            if let target = approvalShortTarget {
+                Text(target)
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.6))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
             if queueTotal > 1 {
-                Text("\(queueIndex) of \(queueTotal)")
+                Text("\(queueIndex)/\(queueTotal)")
                     .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(.white.opacity(0.75))
                     .padding(.horizontal, 6).padding(.vertical, 2)
                     .background(
-                        Capsule().fill(Color(red: 1.0, green: 0.62, blue: 0.20).opacity(0.2))
+                        Capsule().fill(Color(red: 1.0, green: 0.62, blue: 0.20).opacity(0.22))
                     )
                     .overlay(
                         Capsule().stroke(Color(red: 1.0, green: 0.62, blue: 0.20).opacity(0.5),
                                          lineWidth: 0.8)
                     )
             }
-            Spacer()
-            BrowMascot(state: .attention, size: 22)
+            Spacer(minLength: 6)
+            BrowMascot(state: .attention, size: 20)
         }
     }
 
@@ -74,27 +88,6 @@ struct AIApproveSection: View {
 
     private var queueTotal: Int {
         registry.tasks.filter { $0.status == .pendingApproval }.count
-    }
-
-    // MARK: - Tool name + target
-
-    private var toolLine: some View {
-        HStack(spacing: 6) {
-            Image(systemName: toolSymbol)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(toolTint)
-            Text(approval.toolName)
-                .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(.white)
-            if let target = approvalShortTarget {
-                Text(target)
-                    .font(.system(size: 13, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.6))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-            Spacer(minLength: 0)
-        }
     }
 
     // MARK: - Preview body
