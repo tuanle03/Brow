@@ -116,6 +116,13 @@
 		9A987A0D2C73CA66005CA465 /* ShelfView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A987A032C73CA66005CA465 /* ShelfView.swift */; };
 		9A987A102C73CA8D005CA465 /* Collections in Frameworks */ = {isa = PBXBuildFile; productRef = 9A987A0F2C73CA8D005CA465 /* Collections */; };
 		9AB0C6BD2C73C9CB00F7CD30 /* NotchHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AB0C6BB2C73C9CB00F7CD30 /* NotchHomeView.swift */; };
+		AF23C5EE2FC94D2A00654A89 /* AIPanelMockup.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF23C5ED2FC94D2A00654A89 /* AIPanelMockup.swift */; };
+		AF23C5F12FC9526100654A89 /* AITask.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF23C5F02FC9526100654A89 /* AITask.swift */; };
+		AF23C5F32FC9528600654A89 /* AITaskRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF23C5F22FC9528600654A89 /* AITaskRegistry.swift */; };
+		AF23C5F62FC952A900654A89 /* AIPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF23C5F52FC952A900654A89 /* AIPanel.swift */; };
+		AF23C5F82FC952BE00654A89 /* AIMonitorSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF23C5F72FC952BE00654A89 /* AIMonitorSection.swift */; };
+		AF23C5FA2FC952E600654A89 /* AIApproveSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF23C5F92FC952E600654A89 /* AIApproveSection.swift */; };
+		AF23C5FC2FC952F900654A89 /* AIAskSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF23C5FB2FC952F900654A89 /* AIAskSection.swift */; };
 		AF46429E2FC845850045D431 /* IdleLottieActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF46429D2FC845850045D431 /* IdleLottieActivity.swift */; };
 		B10348D92C74E56000475897 /* ConditionalModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10348D82C74E56000475897 /* ConditionalModifier.swift */; };
 		B10F84A32C6C9596009F3026 /* TestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10F84A22C6C9596009F3026 /* TestView.swift */; };
@@ -297,6 +304,13 @@
 		9A0887342C7AFF8E00C160EA /* TabSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabSelectionView.swift; sourceTree = "<group>"; };
 		9A987A032C73CA66005CA465 /* ShelfView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShelfView.swift; sourceTree = "<group>"; };
 		9AB0C6BB2C73C9CB00F7CD30 /* NotchHomeView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotchHomeView.swift; sourceTree = "<group>"; };
+		AF23C5ED2FC94D2A00654A89 /* AIPanelMockup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPanelMockup.swift; sourceTree = "<group>"; };
+		AF23C5F02FC9526100654A89 /* AITask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITask.swift; sourceTree = "<group>"; };
+		AF23C5F22FC9528600654A89 /* AITaskRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITaskRegistry.swift; sourceTree = "<group>"; };
+		AF23C5F52FC952A900654A89 /* AIPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPanel.swift; sourceTree = "<group>"; };
+		AF23C5F72FC952BE00654A89 /* AIMonitorSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIMonitorSection.swift; sourceTree = "<group>"; };
+		AF23C5F92FC952E600654A89 /* AIApproveSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIApproveSection.swift; sourceTree = "<group>"; };
+		AF23C5FB2FC952F900654A89 /* AIAskSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIAskSection.swift; sourceTree = "<group>"; };
 		AF46429D2FC845850045D431 /* IdleLottieActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleLottieActivity.swift; sourceTree = "<group>"; };
 		B10348D82C74E56000475897 /* ConditionalModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConditionalModifier.swift; sourceTree = "<group>"; };
 		B10F84A22C6C9596009F3026 /* TestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestView.swift; sourceTree = "<group>"; };
@@ -438,6 +452,10 @@
 				5565EAB6E4A626F41BEC5B04 /* ClaudeCodeStore.swift */,
 				8D14452ED0A9D6795FB34556 /* BrowMascot.swift */,
 				D794C4D274CC6937AEB77D3E /* AISessionsTabView.swift */,
+				AF23C5EC2FC94D2A00654A89 /* Mockups */,
+				AF23C5EF2FC9526100654A89 /* Models */,
+				AF23C5F22FC9528600654A89 /* AITaskRegistry.swift */,
+				AF23C5F42FC952A900654A89 /* Views */,
 			);
 			path = AI;
 			sourceTree = "<group>";
@@ -687,6 +705,33 @@
 				1113ABC42E80E27000EC13B2 /* Views */,
 			);
 			path = Shelf;
+			sourceTree = "<group>";
+		};
+		AF23C5EC2FC94D2A00654A89 /* Mockups */ = {
+			isa = PBXGroup;
+			children = (
+				AF23C5ED2FC94D2A00654A89 /* AIPanelMockup.swift */,
+			);
+			path = Mockups;
+			sourceTree = "<group>";
+		};
+		AF23C5EF2FC9526100654A89 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				AF23C5F02FC9526100654A89 /* AITask.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		AF23C5F42FC952A900654A89 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				AF23C5F52FC952A900654A89 /* AIPanel.swift */,
+				AF23C5F72FC952BE00654A89 /* AIMonitorSection.swift */,
+				AF23C5F92FC952E600654A89 /* AIApproveSection.swift */,
+				AF23C5FB2FC952F900654A89 /* AIAskSection.swift */,
+			);
+			path = Views;
 			sourceTree = "<group>";
 		};
 		B141C23B2CA5F50900AC8CC8 /* Onboarding */ = {
@@ -952,6 +997,7 @@
 				B1D365D02C6A9A6C0047BDBC /* SystemEventIndicatorModifier.swift in Sources */,
 				1194E87C2EA19E09009C82D6 /* ImageProcessingService.swift in Sources */,
 				1194E8872EA6DDA7009C82D6 /* BrowSkyLightWindow.swift in Sources */,
+				AF23C5FA2FC952E600654A89 /* AIApproveSection.swift in Sources */,
 				14D570CB2C5F4B2C0011E668 /* BatteryStatusViewModel.swift in Sources */,
 				9A0887322C7A693000C160EA /* TabButton.swift in Sources */,
 				1153BD9C2D98853B00979FB0 /* NowPlayingController.swift in Sources */,
@@ -995,6 +1041,7 @@
 				14E9FEAA2C70BF610062E83F /* DownloadView.swift in Sources */,
 				B1B112912C6A572100093D8F /* EditPanelView.swift in Sources */,
 				B1C4489B2C97376A001F0858 /* TipStore.swift in Sources */,
+				AF23C5F82FC952BE00654A89 /* AIMonitorSection.swift in Sources */,
 				1153BD912D986DB300979FB0 /* PlaybackState.swift in Sources */,
 				B1A78C822C8BA08100BD51B0 /* FullscreenMediaDetection.swift in Sources */,
 				14E9FEAE2C7325770062E83F /* Button+Bouncing.swift in Sources */,
@@ -1020,6 +1067,7 @@
 				1132E5142E777B920068732D /* YouTubeMusicNetworking.swift in Sources */,
 				1132E5122E777B6E0068732D /* YouTubeMusicModels.swift in Sources */,
 				11CFC65F2E097F2F00748C80 /* OnboardingView.swift in Sources */,
+				AF23C5FC2FC952F900654A89 /* AIAskSection.swift in Sources */,
 				14CEF4162C5CAED300855D72 /* BrowApp.swift in Sources */,
 				AF46429E2FC845850045D431 /* IdleLottieActivity.swift in Sources */,
 				B17266DF2C64DFA00031BA0D /* BundleInfos.swift in Sources */,
@@ -1028,8 +1076,11 @@
 				F38DE6482D8243E7008B5C6D /* BatteryActivityManager.swift in Sources */,
 				B10348D92C74E56000475897 /* ConditionalModifier.swift in Sources */,
 				118D1FD12E98FF5F00A2FF63 /* SharingStateManager.swift in Sources */,
+				AF23C5F32FC9528600654A89 /* AITaskRegistry.swift in Sources */,
+				AF23C5F12FC9526100654A89 /* AITask.swift in Sources */,
 				14D570C22C5EAFBF0011E668 /* EmptyState.swift in Sources */,
 				118EBE252E92DCCB00D54B5A /* AssociatedObject.swift in Sources */,
+				AF23C5F62FC952A900654A89 /* AIPanel.swift in Sources */,
 				11F748682EC9AC9600F841DB /* BrowXPCHelperProtocol.swift in Sources */,
 				11F748692EC9AC9600F841DB /* XPCHelperClient.swift in Sources */,
 				118EBE2D2E97165600D54B5A /* Bookmark.swift in Sources */,
@@ -1057,6 +1108,7 @@
 				D35FE994D92D4D4E9E8A7880 /* ClaudeCodeHookInstaller.swift in Sources */,
 				F2857591B33CD27086D05868 /* ClaudeCodeStore.swift in Sources */,
 				D538121168B5C735A0DF143C /* BrowMascot.swift in Sources */,
+				AF23C5EE2FC94D2A00654A89 /* AIPanelMockup.swift in Sources */,
 				E54AA27E1278F10C7AC82339 /* AISessionsTabView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

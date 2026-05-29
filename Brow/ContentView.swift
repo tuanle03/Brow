@@ -370,7 +370,7 @@ struct ContentView: View {
                 VStack {
                     switch coordinator.currentView {
                     case .ai:
-                        AISessionsTabView()
+                        AIPanel()
                     case .home:
                         NotchHomeView(albumArtNamespace: albumArtNamespace)
                     case .shelf:
