@@ -46,6 +46,13 @@ final class ClaudeCodeStore: ObservableObject {
     /// timeout via `resolveTimeout`.
     private var continuations: [UUID: CheckedContinuation<ApprovalDecision, Never>] = [:]
     private var notificationDismissTask: Task<Void, Never>?
+    /// Notifications are deferred by `notificationDebounce` so that the
+    /// "Claude is waiting / needs permission" toast Claude Code sends
+    /// just before a `PermissionRequest` can be cancelled when the real
+    /// approval prompt lands. Keyed by session id; cancelled when a
+    /// `PermissionRequest` arrives for the same session.
+    private var pendingNotificationTasks: [String: Task<Void, Never>] = [:]
+    private static let notificationDebounce: TimeInterval = 0.8
 
     private init() {
         rules = (try? PermissionRule.loadAll()) ?? []
@@ -58,6 +65,13 @@ final class ClaudeCodeStore: ObservableObject {
     /// suspends until the user decides (or the bridge times us out).
     func handlePermissionRequest(_ payload: PermissionRequestPayload, rawJSON: String) async -> String {
         updateSession(from: payload)
+        // A Notification toast for the same session that fired in the
+        // last ~800ms is almost certainly Claude Code's pre-permission
+        // ping ("Claude is waiting / needs permission"). Drop it — the
+        // approval panel itself is the better signal.
+        if let sessionID = payload.sessionID {
+            cancelPendingNotification(for: sessionID)
+        }
 
         let approval = PendingApproval(
             id: UUID(),
@@ -271,9 +285,31 @@ final class ClaudeCodeStore: ObservableObject {
 
     func recordNotification(_ payload: NotificationPayload) {
         touchSession(id: payload.sessionID, projectDirectory: payload.projectDirectory)
-        surfaceToast(.notification(payload.message),
-                     sessionID: payload.sessionID,
-                     projectDirectory: payload.projectDirectory)
+        // Defer the toast a beat — Claude Code's permission requests are
+        // preceded by a "Claude is waiting…" Notification, and we don't
+        // want both to flash before the approval card lands. If a real
+        // PermissionRequest comes in for this session within the debounce
+        // window, it cancels this task before the toast surfaces.
+        let key = payload.sessionID ?? UUID().uuidString
+        pendingNotificationTasks[key]?.cancel()
+        let message = payload.message
+        let sessionID = payload.sessionID
+        let projectDirectory = payload.projectDirectory
+        pendingNotificationTasks[key] = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Self.notificationDebounce))
+            if Task.isCancelled { return }
+            await MainActor.run {
+                guard let self else { return }
+                self.pendingNotificationTasks.removeValue(forKey: key)
+                self.surfaceToast(.notification(message),
+                                  sessionID: sessionID,
+                                  projectDirectory: projectDirectory)
+            }
+        }
+    }
+
+    private func cancelPendingNotification(for sessionID: String) {
+        pendingNotificationTasks.removeValue(forKey: sessionID)?.cancel()
     }
 
     func recordStop(_ payload: StopPayload) {
