@@ -59,4 +59,27 @@ final class AIAppModelTests: XCTestCase {
         // freshness window — must NOT re-present.
         XCTAssertNil(m.completionCardSession(now: ts(100 + 4 * 60)))
     }
+
+    /// Regression for the empty-v8-list bug: Brow's bridge can start
+    /// listening after a `claude` CLI session is already running, so that
+    /// session's `SessionStart` hook never reaches the app — its first
+    /// event ingested here is a `PermissionRequest`. Before the fix,
+    /// `SessionState.apply`'s non-`sessionStarted` cases dropped events for
+    /// unknown session ids, so no session ever appeared in
+    /// `surfacedSessions`/`islandSessionSections` and the notch showed an
+    /// empty list despite the bridge visibly receiving events.
+    func testSessionMissingSessionStartStillSurfacesInIslandList() {
+        let m = AIAppModel()
+        m.ingest([
+            .permissionRequested(.init(
+                sessionID: "attached-midflight",
+                request: PermissionRequest(id: "p", title: "t", summary: "s", affectedPath: "", toolName: "Bash"),
+                timestamp: ts(1)
+            )),
+        ])
+
+        let session = try! XCTUnwrap(m.state.sessionsByID["attached-midflight"])
+        XCTAssertTrue(session.isVisibleInIsland)
+        XCTAssertTrue(m.surfacedSessions(now: ts(1)).contains(where: { $0.id == "attached-midflight" }))
+    }
 }

@@ -51,6 +51,31 @@ final class SessionStateTests: XCTestCase {
         XCTAssertEqual(st.sessionsByID["s1"]?.phase, .completed) // not resurrected
     }
 
+    /// Reproduces the empty-v8-list bug: a session Brow attaches to
+    /// mid-flight (its `SessionStart` fired before the bridge was
+    /// listening) must still surface once a later hook event arrives for
+    /// its id, not be silently dropped for lacking a prior
+    /// `sessionStarted`. Covers both a lone `activityUpdated` and a lone
+    /// `permissionRequested` as the first-ever event for a session id.
+    func testEventForUnknownSessionCreatesVisibleSession() {
+        var st = SessionState()
+        st.apply(.activityUpdated(.init(sessionID: "missed-start", summary: "You: hi", phase: .running, timestamp: ts(1))))
+        let created = st.sessionsByID["missed-start"]
+        XCTAssertNotNil(created)
+        XCTAssertTrue(created?.isHookManaged ?? false)
+        XCTAssertTrue(created?.isVisibleInIsland ?? false)
+
+        var st2 = SessionState()
+        st2.apply(.permissionRequested(.init(
+            sessionID: "missed-start-2",
+            request: PermissionRequest(id: "p", title: "t", summary: "s", affectedPath: "", toolName: "Bash"),
+            timestamp: ts(1)
+        )))
+        let createdViaPermission = st2.sessionsByID["missed-start-2"]
+        XCTAssertEqual(createdViaPermission?.phase, .waitingForApproval)
+        XCTAssertTrue(createdViaPermission?.isVisibleInIsland ?? false)
+    }
+
     func testTwoMissEviction() {
         var st = SessionState()
         st.apply(.sessionStarted(.init(sessionID: "s1", title: "r", tool: .claudeCode, summary: "", timestamp: ts(1))))

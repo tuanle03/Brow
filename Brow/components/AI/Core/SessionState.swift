@@ -28,6 +28,20 @@ struct SessionState: Equatable, Sendable {
     /// it's a fresh-start signal, not an incremental update, so it always
     /// applies. `markProcessLiveness` is also exempt (not part of `apply`);
     /// liveness polling has its own cadence, independent of event ordering.
+    ///
+    /// Upsert-on-any-event: unlike the reference (which relies on an
+    /// `AppModel`-level JSONL/registry reconciliation pass Brow hasn't
+    /// ported yet), every non-`sessionStarted` case below creates a session
+    /// on first sighting instead of dropping the event when the id is
+    /// unknown. Without this, a session Brow attaches to mid-flight (its
+    /// `SessionStart` fired before the bridge was listening) never
+    /// materializes — every later event is silently dropped and the v8
+    /// list stays empty even though hook events are arriving. This mirrors
+    /// the old `ClaudeCodeStore`'s `touchSession`/`recordUserPrompt`, which
+    /// already created a session record from any event, not just
+    /// `SessionStart`. `actionableStateResolved` is deliberately excluded —
+    /// it only makes sense against a session already in an actionable
+    /// phase, so it can't conjure one into existence.
     mutating func apply(_ event: AgentEvent) {
         switch event {
         case let .sessionStarted(payload):
@@ -54,7 +68,7 @@ struct SessionState: Equatable, Sendable {
             upsert(session)
 
         case let .activityUpdated(payload):
-            guard var session = sessionsByID[payload.sessionID], payload.timestamp >= session.updatedAt else {
+            guard var session = upsertedSession(id: payload.sessionID, timestamp: payload.timestamp) else {
                 return
             }
 
@@ -76,7 +90,7 @@ struct SessionState: Equatable, Sendable {
             upsert(session)
 
         case let .permissionRequested(payload):
-            guard var session = sessionsByID[payload.sessionID], payload.timestamp >= session.updatedAt else {
+            guard var session = upsertedSession(id: payload.sessionID, timestamp: payload.timestamp) else {
                 return
             }
 
@@ -88,7 +102,7 @@ struct SessionState: Equatable, Sendable {
             upsert(session)
 
         case let .questionAsked(payload):
-            guard var session = sessionsByID[payload.sessionID], payload.timestamp >= session.updatedAt else {
+            guard var session = upsertedSession(id: payload.sessionID, timestamp: payload.timestamp) else {
                 return
             }
 
@@ -100,7 +114,7 @@ struct SessionState: Equatable, Sendable {
             upsert(session)
 
         case let .sessionCompleted(payload):
-            guard var session = sessionsByID[payload.sessionID], payload.timestamp >= session.updatedAt else {
+            guard var session = upsertedSession(id: payload.sessionID, timestamp: payload.timestamp) else {
                 return
             }
 
@@ -115,7 +129,7 @@ struct SessionState: Equatable, Sendable {
             upsert(session)
 
         case let .jumpTargetUpdated(payload):
-            guard var session = sessionsByID[payload.sessionID], payload.timestamp >= session.updatedAt else {
+            guard var session = upsertedSession(id: payload.sessionID, timestamp: payload.timestamp) else {
                 return
             }
 
@@ -124,7 +138,7 @@ struct SessionState: Equatable, Sendable {
             upsert(session)
 
         case let .sessionMetadataUpdated(payload):
-            guard var session = sessionsByID[payload.sessionID], payload.timestamp >= session.updatedAt else {
+            guard var session = upsertedSession(id: payload.sessionID, timestamp: payload.timestamp) else {
                 return
             }
 
@@ -151,6 +165,30 @@ struct SessionState: Equatable, Sendable {
             session.updatedAt = payload.timestamp
             upsert(session)
         }
+    }
+
+    /// Returns the existing session for `id` (subject to the monotonic
+    /// `updatedAt` guard), or synthesizes a bare hook-managed one if this is
+    /// the first event seen for `id`. `nil` means "drop the event" — either
+    /// it's stale (older than the session's `updatedAt`) or the caller
+    /// should not create a session (not used by `actionableStateResolved`,
+    /// see its own guard). Synthesized sessions default to Claude Code —
+    /// the only tool wired through `ClaudeEventMapping` today — and
+    /// `isHookManaged = true`, matching every session this reducer sees in
+    /// Brow's current Core scope.
+    private func upsertedSession(id: String, timestamp: Date) -> AgentSession? {
+        if let existing = sessionsByID[id] {
+            return timestamp >= existing.updatedAt ? existing : nil
+        }
+        return AgentSession(
+            id: id,
+            title: "Claude Code",
+            tool: .claudeCode,
+            attachmentState: .attached,
+            updatedAt: timestamp,
+            isHookManaged: true,
+            isProcessAlive: true
+        )
     }
 
     // MARK: - Directly-invoked mutations (no event, caller supplies timestamp)
