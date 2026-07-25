@@ -166,19 +166,37 @@ enum ClaudeEventMapping {
     /// calling it from this non-isolated pure mapper would force
     /// `mapClaudeEvent` onto the main actor too. Small, pure, worth
     /// duplicating rather than refactoring the store in this task.
+    ///
+    /// Unlisted tools fall through to a full sentence ("Claude Code wants
+    /// to run NotebookEdit.") rather than `activityDescription`'s bare
+    /// tool-name fallback — the two callers of `specificActivity` want
+    /// different unmatched-tool fallbacks, so this calls the nil-returning
+    /// core directly instead of going through `activityDescription`.
     private static func permissionSummary(toolName: String, toolInput: [String: AnyJSON]?) -> String {
         if toolName == "ExitPlanMode" {
             return "Claude wants to exit plan mode and start implementation."
         }
-        if let activity = activityDescription(toolName: toolName, toolInput: toolInput ?? [:]) {
+        if let activity = specificActivity(toolName: toolName, toolInput: toolInput ?? [:]) {
             return activity
         }
         return "\(AgentTool.claudeCode.displayName) wants to run \(toolName)."
     }
 
+    /// The activity-chip flavor: falls back to the bare tool name for
+    /// unmatched tools (matching `ClaudeCodeStore.formatToolActivity`).
+    /// Not `private` (unlike its sibling `specificActivity`) so
+    /// `ClaudeEventMappingTests` can assert this fallback directly —
+    /// `permissionSummary`'s different fallback is covered indirectly via
+    /// `mapClaudeEvent`, but there's no such public path to this one yet.
+    static func activityDescription(toolName: String, toolInput: [String: AnyJSON]) -> String {
+        specificActivity(toolName: toolName, toolInput: toolInput) ?? toolName
+    }
+
     /// Miniature duplicate of `ClaudeCodeStore.formatToolActivity` — see the
     /// doc comment on `permissionSummary` for why this isn't a shared call.
-    private static func activityDescription(toolName: String, toolInput: [String: AnyJSON]) -> String? {
+    /// `nil` for unmatched tools; callers (`activityDescription`,
+    /// `permissionSummary`) each pick their own fallback.
+    private static func specificActivity(toolName: String, toolInput: [String: AnyJSON]) -> String? {
         func basename(_ path: String) -> String {
             let last = (path as NSString).lastPathComponent
             return last.isEmpty ? path : last
@@ -206,7 +224,7 @@ enum ClaudeEventMapping {
         case "Task":
             return toolInput["description"].map { "Subagent: \(short($0.asDisplayString, max: 40))" } ?? "Running subagent"
         default:
-            return toolName
+            return nil
         }
     }
 

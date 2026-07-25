@@ -76,6 +76,50 @@ final class ClaudeEventMappingTests: XCTestCase {
         XCTAssertEqual(payload.request.suggestedUpdates.count, 2)
     }
 
+    // Task 2.8b fix round 1: `permissionSummary`'s unmatched-tool fallback
+    // (the full "wants to run X" sentence) and `activityDescription`'s
+    // unmatched-tool fallback (bare tool name) must stay independently
+    // correct — a prior change collapsed both onto one shared function
+    // and silently degraded the approval-card summary for any unlisted
+    // tool (NotebookEdit, mcp__* tools, ...) to a bare tool name.
+    private static let unlistedToolPermissionRequestJSON = """
+    {
+      "hook_event_name": "PermissionRequest",
+      "session_id": "sess-nb1",
+      "tool_name": "NotebookEdit",
+      "tool_input": {},
+      "tool_use_id": "toolu_nb1",
+      "project_dir": "/Users/tuan/project",
+      "cwd": "/Users/tuan/project",
+      "permission_mode": "default"
+    }
+    """
+
+    func testPermissionSummaryForUnlistedToolIsFullSentence() throws {
+        let data = try XCTUnwrap(Self.unlistedToolPermissionRequestJSON.data(using: .utf8))
+        let incoming = try XCTUnwrap(ClaudeCodeIncomingEvent.decode(from: data))
+
+        let events = ClaudeEventMapping.mapClaudeEvent(incoming, context: nil)
+
+        XCTAssertEqual(events.count, 1)
+        guard case let .permissionRequested(payload)? = events.first else {
+            return XCTFail("Expected exactly one .permissionRequested event, got \(events)")
+        }
+        // Unmatched tool (not in the Bash/Edit/Write/.../Task switch) must
+        // fall through to the full sentence, NOT degrade to a bare tool
+        // name — that's the regression the review caught.
+        XCTAssertEqual(payload.request.summary, "Claude Code wants to run NotebookEdit.")
+    }
+
+    func testActivityDescriptionForUnlistedToolIsBareToolName() {
+        // The chip/activity flavor keeps item 2's fix: unmatched tools show
+        // the tool name, matching `ClaudeCodeStore.formatToolActivity`.
+        XCTAssertEqual(
+            ClaudeEventMapping.activityDescription(toolName: "NotebookEdit", toolInput: [:]),
+            "NotebookEdit"
+        )
+    }
+
     func testSessionStartMapsToSessionStarted() throws {
         let data = try XCTUnwrap(Self.sessionStartJSON.data(using: .utf8))
         let incoming = try XCTUnwrap(ClaudeCodeIncomingEvent.decode(from: data))
