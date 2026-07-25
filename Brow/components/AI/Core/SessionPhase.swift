@@ -7,6 +7,15 @@ enum SessionPhase: String, Codable, Sendable, Equatable {
     /// The two phases that should pull the notch open and hold the user's
     /// eye — everything else can sit quietly in the session list.
     var requiresAttention: Bool { self == .waitingForApproval || self == .waitingForAnswer }
+
+    var displayName: String {
+        switch self {
+        case .running: "Running"
+        case .waitingForApproval: "Needs approval"
+        case .waitingForAnswer: "Needs answer"
+        case .completed: "Completed"
+        }
+    }
 }
 
 /// Whether Brow still has a live line on a session (hook connection /

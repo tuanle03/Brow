@@ -14,5 +14,6 @@ struct JumpTarget: Codable, Sendable, Equatable {
     var terminalTTY: String?
     var tmuxTarget: String?
     var tmuxSocketPath: String?
+    var warpPaneUUID: String?
     var codexThreadID: String?
 }
