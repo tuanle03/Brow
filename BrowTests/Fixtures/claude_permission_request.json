@@ -1,0 +1,29 @@
+{
+  "hook_event_name": "PermissionRequest",
+  "session_id": "sess-abc123",
+  "tool_name": "Edit",
+  "tool_input": {
+    "file_path": "/Users/tuan/project/foo.swift",
+    "old_string": "let a = 1",
+    "new_string": "let a = 2"
+  },
+  "tool_use_id": "toolu_01ABC",
+  "project_dir": "/Users/tuan/project",
+  "cwd": "/Users/tuan/project",
+  "permission_mode": "default",
+  "permission_suggestions": [
+    {
+      "type": "addRules",
+      "destination": "session",
+      "behavior": "allow",
+      "rules": [
+        { "toolName": "Edit", "ruleContent": "/Users/tuan/project/**" }
+      ]
+    },
+    {
+      "type": "setMode",
+      "destination": "session",
+      "mode": "acceptEdits"
+    }
+  ]
+}

@@ -155,7 +155,7 @@ struct AISettingsView: View {
                         .textSelection(.enabled)
                 }
                 LabeledContent("Hook command") {
-                    Text(ClaudeCodeHookInstaller.hookCommand)
+                    Text(ClaudeCodeHookInstaller.currentHookCommand)
                         .font(.caption.monospaced())
                         .textSelection(.enabled)
                         .lineLimit(3)

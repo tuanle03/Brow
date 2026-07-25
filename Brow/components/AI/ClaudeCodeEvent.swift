@@ -262,6 +262,21 @@ enum AnyJSON: Codable, Equatable {
             return (try? String(data: enc.encode(self), encoding: .utf8)) ?? "?"
         }
     }
+
+    /// Plain Foundation value (`String`/`Int`/`[String: Any]`/…) suitable for
+    /// `JSONSerialization`. Used to fold a decoded `tool_input` back into the
+    /// `updatedInput` hook response for answered `AskUserQuestion` prompts.
+    var foundationObject: Any {
+        switch self {
+        case .string(let v): return v
+        case .int(let v):    return v
+        case .double(let v): return v
+        case .bool(let v):   return v
+        case .null:          return NSNull()
+        case .array(let v):  return v.map(\.foundationObject)
+        case .object(let v): return v.mapValues(\.foundationObject)
+        }
+    }
 }
 
 /// Decoded shell wrapper around an incoming event. Carries the raw JSON

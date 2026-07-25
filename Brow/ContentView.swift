@@ -35,6 +35,16 @@ struct ContentView: View {
     /// others stuck open.
     @State private var notchWasOpenBeforeAI: Bool = false
 
+    /// Task 2.7: brief `.approved`/`.denied` flash for the v8 closed pill's
+    /// `.mascot` case, set from `claudeStore.recentlyResolved` (still the
+    /// live source of truth for decisions) and self-cleared back to nil
+    /// (→ `.idle`) after `mascotFlashDuration` — mirrors the `hoverTask`/
+    /// `notchWasOpenBeforeAI` self-cancelling `Task` idiom already used in
+    /// this file rather than adding a new timer abstraction.
+    @State private var mascotFlashState: BrowMascot.MascotState?
+    @State private var mascotFlashTask: Task<Void, Never>?
+    private let mascotFlashDuration: Duration = .seconds(1.2)
+
     @State private var gestureProgress: CGFloat = .zero
 
     @State private var haptics: Bool = false
@@ -88,6 +98,27 @@ struct ContentView: View {
         return chinWidth
     }
 
+    /// Height of the opened header lane (`BrowHeader`), matching the frame in
+    /// `NotchLayout`'s open branch.
+    private var openHeaderHeight: CGFloat { max(24, vm.effectiveClosedNotchHeight) }
+
+    /// Cap the auto-height AI surface content grows to before it scrolls.
+    /// `maxOpenNotchHeight` minus the header and the panel's bottom padding /
+    /// margin, so header + content + padding stays within the window.
+    private var openSurfaceMaxHeight: CGFloat {
+        max(120, maxOpenNotchHeight - openHeaderHeight - 24)
+    }
+
+    /// Height for the opened `mainLayout`:
+    /// - AI tab → `nil`, so the panel auto-sizes to header + the measured,
+    ///   capped surface content (the single `NotchShape` fill/clip hugs it).
+    /// - home / shelf → the fixed `openNotchSize.height` (unchanged).
+    /// - closed → `nil` (intrinsic closed-pill size).
+    private var openPanelHeight: CGFloat? {
+        guard vm.notchState == .open else { return nil }
+        return coordinator.currentView == .ai ? nil : openNotchSize.height
+    }
+
     var body: some View {
         // Calculate scale based on gesture progress only
         let gestureScale: CGFloat = {
@@ -108,7 +139,14 @@ struct ContentView: View {
                         : cornerRadiusInsets.closed.bottom
                     )
                     .padding([.horizontal, .bottom], vm.notchState == .open ? 12 : 0)
-                    .background(.black)
+                    // Single fill for the whole island (closed pill + open
+                    // panel): `V6Palette.ink`, painted once here and clipped
+                    // to `currentNotchShape`. v8 content views (`V8ClosedPill`,
+                    // `IslandSurfaceView`) must NOT paint their own
+                    // background/shape — a second nested fill drifts out of
+                    // sync with this one (different padding/size) and shows
+                    // up as a mismatched black frame around an inset panel.
+                    .background(V6Palette.ink)
                     .clipShape(currentNotchShape)
                     .overlay {
                         // Animated rainbow halo — only while Claude Code
@@ -137,10 +175,17 @@ struct ContentView: View {
                     )
                 
                 mainLayout
-                    .frame(height: vm.notchState == .open ? vm.notchSize.height : nil)
+                    .frame(height: openPanelHeight)
                     .conditionalModifier(true) { view in
+                        // Task 2.7: close timing aligned to the v8 spec's
+                        // reference morph (open: spring 0.42/0.8, close:
+                        // smooth 0.3s) — `currentNotchShape` is the single
+                        // `NotchShape` instance both states clip through,
+                        // so this animation interpolates its corner radii
+                        // (`NotchShape.animatableData`) rather than
+                        // cross-fading two shapes.
                         let openAnimation = Animation.spring(response: 0.42, dampingFraction: 0.8, blendDuration: 0)
-                        let closeAnimation = Animation.spring(response: 0.45, dampingFraction: 1.0, blendDuration: 0)
+                        let closeAnimation = Animation.smooth(duration: 0.3)
                         
                         return view
                             .animation(vm.notchState == .open ? openAnimation : closeAnimation, value: vm.notchState)
@@ -159,7 +204,16 @@ struct ContentView: View {
                                 handleDownGesture(translation: translation, phase: phase)
                             }
                     }
-                    .conditionalModifier(Defaults[.closeGestureEnabled] && Defaults[.enableGestures]) { view in
+                    // Close-on-swipe-up is a CLOSED-pill affordance only. macOS
+                    // delivers mouse-wheel and two-finger trackpad scrolls as
+                    // scrollWheel events, which `panGesture`'s ScrollMonitor
+                    // can't tell apart from a swipe — so while the panel is
+                    // OPEN, scrolling its (now scrollable) content would
+                    // accumulate an up-swipe and collapse the island. Gate the
+                    // up-monitor to the closed state so open-panel scrolls go to
+                    // the ScrollView only; the opened panel is dismissed by
+                    // click-outside / hover-away / auto-collapse instead.
+                    .conditionalModifier(Defaults[.closeGestureEnabled] && Defaults[.enableGestures] && vm.notchState == .closed) { view in
                         view
                             .panGesture(direction: .up) { translation, phase in
                                 handleUpGesture(translation: translation, phase: phase)
@@ -236,6 +290,9 @@ struct ContentView: View {
         .onChange(of: claudeStore.shouldAutoExpand) { _, shouldExpand in
             handleAIAutoExpansionChange(shouldExpand)
         }
+        .onChange(of: claudeStore.recentlyResolved.first?.id) { _, newID in
+            handleDecisionResolved(newID)
+        }
         .onChange(of: vm.anyDropZoneTargeting) { _, isTargeted in
             anyDropDebounceTask?.cancel()
 
@@ -309,20 +366,31 @@ struct ContentView: View {
                       } else if coordinator.sneakPeek.show && Defaults[.inlineHUD] && (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && vm.notchState == .closed {
                           InlineHUD(type: $coordinator.sneakPeek.type, value: $coordinator.sneakPeek.value, icon: $coordinator.sneakPeek.icon, hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
                               .transition(.opacity)
-                      } else if !coordinator.expandingView.show && vm.notchState == .closed && coordinator.currentView == .ai && !vm.hideOnClosed {
-                          // AI tab selected — closed notch reflects what
-                          // the user was viewing, just like the music
-                          // branch below does for the home tab. Mascot
-                          // state + badge come from AITaskRegistry.
-                          AILiveActivity(vm: vm)
-                              .frame(alignment: .center)
-                      } else if (!coordinator.expandingView.show || coordinator.expandingView.type == .music) && vm.notchState == .closed && (musicManager.isPlaying || !musicManager.isPlayerIdle) && coordinator.musicLiveActivityEnabled && !vm.hideOnClosed {
-                          MusicLiveActivity()
-                              .frame(alignment: .center)
+                      } else if (!coordinator.expandingView.show || coordinator.expandingView.type == .music) && vm.notchState == .closed && !vm.hideOnClosed && v8ClosedPillContent != .empty {
+                          // Task 2.7: single precedence-driven pill —
+                          // AI-attention > AI-running > music > mascot —
+                          // replacing the old ad-hoc AI-tab / Music /
+                          // BrowFaceAnimation branches. The `|| type ==
+                          // .music` clause preserves the old Music branch's
+                          // one exception: still show while the dedicated
+                          // music sneak-peek is expanding.
+                          V8ClosedPill(
+                              content: v8ClosedPillContent,
+                              albumArtNamespace: albumArtNamespace,
+                              attentionSession: v8AttentionSession(for: v8ClosedPillContent),
+                              attentionCount: v8AttentionCount,
+                              mascotState: mascotFlashState ?? .idle,
+                              size: vm.closedNotchSize,
+                              // Per-screen physical-notch avoidance: on a
+                              // notched MacBook `closedNotchSize.width` IS the
+                              // cutout width, so pass it as the reserved span
+                              // and the pill flanks it. External displays →
+                              // 0 → spanning layout unchanged.
+                              notchWidth: screenHasNotch(screenUUID: vm.screenUUID) ? vm.closedNotchSize.width : 0
+                          )
+                          .frame(alignment: .center)
                       } else if !coordinator.expandingView.show && vm.notchState == .closed && (!musicManager.isPlaying && musicManager.isPlayerIdle) && Defaults[.selectedIdleVisualizer] != nil && !vm.hideOnClosed {
                           IdleLottieActivity()
-                      } else if !coordinator.expandingView.show && vm.notchState == .closed && (!musicManager.isPlaying && musicManager.isPlayerIdle) && Defaults[.showNotHumanFace] && !vm.hideOnClosed  {
-                          BrowFaceAnimation()
                        } else if vm.notchState == .open {
                            BrowHeader()
                                .frame(height: max(24, vm.effectiveClosedNotchHeight))
@@ -377,7 +445,25 @@ struct ContentView: View {
                 VStack {
                     switch coordinator.currentView {
                     case .ai:
-                        AIPanel()
+                        IslandSurfaceView(
+                            surface: currentIslandSurface,
+                            model: AIAppModel.shared,
+                            onJump: { session in TerminalJumpService.jump(to: session) },
+                            maxContentHeight: openSurfaceMaxHeight
+                        )
+                        // Auto-dismiss the completion card ~5s after it
+                        // appears (the old store toast's timer, moved to
+                        // the surface). `.task(id:)` cancels/restarts when
+                        // the surface changes, so a resolved card's timer
+                        // is torn down the moment the surface flips away.
+                        .task(id: currentIslandSurface) {
+                            guard case let .completionCard(sessionID) = currentIslandSurface else { return }
+                            try? await Task.sleep(for: .seconds(5))
+                            guard !Task.isCancelled,
+                                  let session = AIAppModel.shared.state.sessionsByID[sessionID]
+                            else { return }
+                            AIAppModel.shared.dismissCompletion(session)
+                        }
                     case .home:
                         NotchHomeView(albumArtNamespace: albumArtNamespace)
                     case .shelf:
@@ -398,128 +484,6 @@ struct ContentView: View {
     }
 
     @ViewBuilder
-    func BrowFaceAnimation() -> some View {
-        HStack {
-            HStack {
-                Rectangle()
-                    .fill(.clear)
-                    .frame(
-                        width: max(0, vm.effectiveClosedNotchHeight - 12),
-                        height: max(0, vm.effectiveClosedNotchHeight - 12)
-                    )
-                Rectangle()
-                    .fill(.black)
-                    .frame(width: vm.closedNotchSize.width - 20)
-                MinimalFaceFeatures()
-            }
-        }.frame(
-            height: vm.effectiveClosedNotchHeight,
-            alignment: .center
-        )
-    }
-
-    @ViewBuilder
-    func MusicLiveActivity() -> some View {
-        HStack {
-            Image(nsImage: musicManager.albumArt)
-                .resizable()
-                .clipped()
-                .clipShape(
-                    RoundedRectangle(
-                        cornerRadius: MusicPlayerImageSizes.cornerRadiusInset.closed)
-                )
-                .matchedGeometryEffect(id: "albumArt", in: albumArtNamespace)
-                .frame(
-                    width: max(0, vm.effectiveClosedNotchHeight - 12),
-                    height: max(0, vm.effectiveClosedNotchHeight - 12)
-                )
-
-            Rectangle()
-                .fill(.black)
-                .overlay(
-                    HStack(alignment: .top) {
-                        if coordinator.expandingView.show
-                            && coordinator.expandingView.type == .music
-                        {
-                            MarqueeText(
-                                .constant(musicManager.songTitle),
-                                textColor: Defaults[.coloredSpectrogram]
-                                    ? Color(nsColor: musicManager.avgColor) : Color.gray,
-                                minDuration: 0.4,
-                                frameWidth: 100
-                            )
-                            .opacity(
-                                (coordinator.expandingView.show
-                                    && Defaults[.sneakPeekStyles] == .inline)
-                                    ? 1 : 0
-                            )
-                            Spacer(minLength: vm.closedNotchSize.width)
-                            // Song Artist
-                            Text(musicManager.artistName)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                                .foregroundStyle(
-                                    Defaults[.coloredSpectrogram]
-                                        ? Color(nsColor: musicManager.avgColor)
-                                        : Color.gray
-                                )
-                                .opacity(
-                                    (coordinator.expandingView.show
-                                        && coordinator.expandingView.type == .music
-                                        && Defaults[.sneakPeekStyles] == .inline)
-                                        ? 1 : 0
-                                )
-                        }
-                    }
-                )
-                .frame(
-                    width: (coordinator.expandingView.show
-                        && coordinator.expandingView.type == .music
-                        && Defaults[.sneakPeekStyles] == .inline)
-                        ? 380
-                        : vm.closedNotchSize.width
-                            + -cornerRadiusInsets.closed.top
-                )
-
-            HStack {
-                if useMusicVisualizer {
-                    Rectangle()
-                        .fill(
-                            Defaults[.coloredSpectrogram]
-                                ? Color(nsColor: musicManager.avgColor).gradient
-                                : Color.gray.gradient
-                        )
-                        .frame(width: 50, alignment: .center)
-                        .matchedGeometryEffect(id: "spectrum", in: albumArtNamespace)
-                        .mask {
-                            AudioSpectrumView(isPlaying: $musicManager.isPlaying)
-                                .frame(width: 16, height: 12)
-                        }
-                } else {
-                    LottieAnimationContainer()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-            }
-            .frame(
-                width: max(
-                    0,
-                    vm.effectiveClosedNotchHeight - 12
-                        + gestureProgress / 2
-                ),
-                height: max(
-                    0,
-                    vm.effectiveClosedNotchHeight - 12
-                ),
-                alignment: .center
-            )
-        }
-        .frame(
-            height: vm.effectiveClosedNotchHeight,
-            alignment: .center
-        )
-    }
-
-    @ViewBuilder
     var dragDetector: some View {
         if Defaults[.boringShelf] && vm.notchState == .closed {
             Color.clear
@@ -536,10 +500,25 @@ struct ContentView: View {
     }
 
     private func doOpen() {
+        // While any session needs the user (approval / question), EVERY
+        // reopen route — click, hover, gesture — must land on the AI surface
+        // so the actionable card is visible, mirroring the auto-expand path
+        // (`handleAIAutoExpansionChange`). Without this a manual reopen lands
+        // on the restored prior tab (home/shelf), where `IslandSurfaceView`
+        // isn't mounted, and the still-pending question/approval card looks
+        // like it vanished. The card state itself is never cleared on
+        // collapse — only answering or the 55s timeout resolves it.
+        if hasPendingAttention {
+            coordinator.currentView = .ai
+        }
         withAnimation(animationSpring) {
             vm.open()
         }
     }
+
+    /// True while any island-visible session requires the user's attention
+    /// (waiting for approval or an answer). Same filter as `v8AttentionCount`.
+    private var hasPendingAttention: Bool { v8AttentionCount > 0 }
 
     // MARK: - Rainbow halo
 
@@ -612,6 +591,20 @@ struct ContentView: View {
                 doOpen()
             }
         } else {
+            // A completion card showing right now is about to lose its
+            // `.task(id:)` auto-dismiss timer below — collapsing the notch
+            // (or the global cleanup flipping `coordinator.currentView`
+            // away from `.ai`) tears down `IslandSurfaceView` before its 5s
+            // sleep finishes, so `dismissCompletion` never runs. Record the
+            // dismissal now, while the surface is still resolvable, so the
+            // same completion doesn't re-present on the next manual AI-tab
+            // open (checked before any state mutation below).
+            if coordinator.currentView == .ai,
+               case let .completionCard(sessionID) = currentIslandSurface,
+               let session = AIAppModel.shared.state.sessionsByID[sessionID] {
+                AIAppModel.shared.dismissCompletion(session)
+            }
+
             // Per-screen close — runs on every screen regardless of who
             // cleared the global flag. Critically, this is independent
             // of `coordinator.currentView` because the first screen will
@@ -637,6 +630,94 @@ struct ContentView: View {
                     }
                 }
             }
+        }
+    }
+
+    // MARK: - Task 2.7: v8 surface mount
+
+    /// Which v8 card the open `.ai` tab shows right now. Kept here rather
+    /// than as an `AIAppModel` computed property so Core stays free of a
+    /// `ClaudeCodeStore` dependency (`AIAppModel` is an additive pure
+    /// mirror per Task 1.7's doc comment) — this is the one place that's
+    /// allowed to read both.
+    ///
+    /// - An attention-requiring session (approval/question) always wins,
+    ///   most-recently-updated first — same tiebreak as
+    ///   `AIAppModel.closedPillContent`.
+    /// - Else, a session that JUST finished shows its completion card,
+    ///   driven off `AIAppModel.completionCardSession(now:)` (a recently
+    ///   completed, non-stale, not-yet-dismissed session) rather than
+    ///   `claudeStore`'s `.stopped` toast — the `.task(id:)` on the surface
+    ///   view below auto-dismisses it after 5s (`dismissCompletion`).
+    /// - Else, the session list.
+    private var currentIslandSurface: IslandSurface {
+        let model = AIAppModel.shared
+        if let attention = model.state.sessionsByID.values
+            .filter(\.isVisibleInIsland)
+            .filter(\.phase.requiresAttention)
+            .max(by: { $0.updatedAt < $1.updatedAt })
+        {
+            switch attention.phase {
+            case .waitingForApproval: return .approvalCard(sessionID: attention.id)
+            case .waitingForAnswer:   return .questionCard(sessionID: attention.id)
+            default: break
+            }
+        }
+        if let completed = model.completionCardSession(now: Date()) {
+            return .completionCard(sessionID: completed.id)
+        }
+        return .sessionList
+    }
+
+    /// Precedence-resolved content for the closed-notch `V8ClosedPill`.
+    /// Reuses the coordinator/`Defaults` flags the old ad-hoc branches read
+    /// (`musicLiveActivityEnabled` + `isPlaying`/`isPlayerIdle` for music,
+    /// `showNotHumanFace` for the idle mascot) — `mascotEnabled` also
+    /// requires no `selectedIdleVisualizer` chosen, preserving the old
+    /// branch order where a custom Lottie idle visualizer always won over
+    /// the built-in mascot (`IdleLottieActivity` stays a separate fallback
+    /// below this pill for that case).
+    private var v8ClosedPillContent: ClosedPillContent {
+        AIAppModel.shared.closedPillContent(
+            musicPlaying: (musicManager.isPlaying || !musicManager.isPlayerIdle) && coordinator.musicLiveActivityEnabled,
+            mascotEnabled: showNotHumanFace && Defaults[.selectedIdleVisualizer] == nil
+        )
+    }
+
+    /// The session backing a `.aiAttention` pill, and how many sessions are
+    /// currently tied for that slot (`V8ClosedPill`'s trailing count badge).
+    private func v8AttentionSession(for content: ClosedPillContent) -> AgentSession? {
+        guard case let .aiAttention(sessionID) = content else { return nil }
+        return AIAppModel.shared.state.sessionsByID[sessionID]
+    }
+
+    private var v8AttentionCount: Int {
+        AIAppModel.shared.state.sessionsByID.values
+            .filter { $0.isVisibleInIsland && $0.phase.requiresAttention }
+            .count
+    }
+
+    /// Fires a brief `.approved`/`.denied` mascot flash whenever a new
+    /// entry lands at the head of `claudeStore.recentlyResolved` (a fresh
+    /// decision, not merely `recentlyResolved` mutating in some other way —
+    /// `newID` only changes when index 0 itself changes). Self-clears back
+    /// to `nil` (→ `.idle`) after `mascotFlashDuration`, cancelling any
+    /// still-pending clear from a previous flash so back-to-back decisions
+    /// each get their own full window.
+    private func handleDecisionResolved(_ newID: UUID?) {
+        guard newID != nil, let outcome = claudeStore.recentlyResolved.first?.outcome else { return }
+        let flash: BrowMascot.MascotState
+        switch outcome {
+        case .decided(.deny):  flash = .denied
+        case .decided:         flash = .approved
+        case .timedOut:        return
+        }
+        mascotFlashTask?.cancel()
+        mascotFlashState = flash
+        mascotFlashTask = Task {
+            try? await Task.sleep(for: mascotFlashDuration)
+            guard !Task.isCancelled else { return }
+            await MainActor.run { mascotFlashState = nil }
         }
     }
 
@@ -673,14 +754,28 @@ struct ContentView: View {
             }
         } else {
             hoverTask = Task {
-                try? await Task.sleep(for: .milliseconds(100))
+                try? await Task.sleep(for: .milliseconds(180))
                 guard !Task.isCancelled else { return }
-                
+
                 await MainActor.run {
+                    // Auto-height fix (commit bdc1377): the opened AI panel
+                    // hugs its content, so a measurement/expand resizes the
+                    // panel under a stationary pointer — a subview slides out
+                    // from under the cursor and SwiftUI fires a spurious
+                    // `.onHover(false)`. Acting on it closed the notch, the
+                    // closed pill reappeared under the pointer, `.onHover(true)`
+                    // reopened it → open/close flicker loop. Gate the close on
+                    // the LIVE pointer actually being outside the island:
+                    // `isMouseHovering()` hit-tests `notchSize`, which `open()`
+                    // sets to `openNotchSize` while open — so this is the
+                    // opened panel's rect. Still inside → the exit was
+                    // spurious, keep the panel open and the hover state intact.
+                    if self.vm.isMouseHovering() { return }
+
                     withAnimation(animationSpring) {
                         self.isHovering = false
                     }
-                    
+
                     if self.vm.notchState == .open && !self.vm.isBatteryPopoverActive && !SharingStateManager.shared.preventNotchClose {
                         self.vm.close()
                     }

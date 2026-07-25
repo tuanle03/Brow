@@ -24,7 +24,7 @@ final class ClaudeCodeStore: ObservableObject {
     /// back through prompts they may have missed. Capped to keep memory
     /// bounded.
     @Published private(set) var recentlyResolved: [ResolvedApproval] = []
-    @Published private(set) var sessions: [String: SessionState] = [:]
+    @Published private(set) var sessions: [String: ClaudeCodeSessionState] = [:]
     @Published private(set) var rules: [PermissionRule] = []
     @Published private(set) var lastRuleError: String?
     /// Transient Claude Code `Notification` payload — set when one arrives,
@@ -90,30 +90,16 @@ final class ClaudeCodeStore: ObservableObject {
             return matched.hookOutputJSON(for: approval)
         }
 
-        // AskUserQuestion is Claude's built-in multi-choice prompt: it
-        // renders its own interactive picker in the terminal and reads
-        // the user's answer from there. The permission hook can only
-        // return allow/deny, so a notch "Allow / Deny" bubble would be
-        // misleading and useless — auto-allow and instead surface the
-        // question as a transient notification so the user knows to
-        // switch to Claude Code to answer.
-        if payload.toolName == "AskUserQuestion" {
-            // The hook contract only round-trips allow/deny — Claude
-            // Code's tool reads the user's actual answer from stdin in
-            // the terminal. Auto-allow so we don't block it; the toast
-            // we surface lets the user know what to type back.
-            let decision: ApprovalDecision = .allow
-            archive(approval, outcome: .decided(decision))
-            let question = Self.parseAskUserQuestion(from: payload.toolInput ?? [:])
-            let body = question.map { "Claude is asking: \($0.text)" }
-                ?? "Claude is asking a question — answer in Claude Code."
-            updateSession(from: payload)
-            surfaceToast(.notification(body),
-                         sessionID: payload.sessionID,
-                         projectDirectory: payload.projectDirectory,
-                         question: question)
-            return decision.hookOutputJSON(for: approval)
-        }
+        // AskUserQuestion is Claude's built-in structured prompt. It rides
+        // in on a PermissionRequest whose answer round-trips through the
+        // hook's `updatedInput` (see `answerQuestion(sessionID:answers:)`
+        // and `ApprovalDecision.allowWithInput`) — exactly what Open Island
+        // does. So it takes the same suspend-on-continuation path as any
+        // other tool: the notch shows the question card (driven by the
+        // mirror's `.questionAsked`), the user answers, and we resolve with
+        // an `allow` carrying the selected answers. If nobody answers, the
+        // shared 55s timeout below falls back to `.ask` (empty body) so
+        // Claude Code's native terminal picker still runs — fail-open.
 
         let decision = await withCheckedContinuation { (cont: CheckedContinuation<ApprovalDecision, Never>) in
             continuations[approval.id] = cont
@@ -171,6 +157,21 @@ final class ClaudeCodeStore: ObservableObject {
         }
         archive(approval, outcome: .decided(decision))
         cont.resume(returning: decision)
+    }
+
+    /// Resolves a pending `AskUserQuestion` request by looking it up by
+    /// session id (the `QuestionCardView` submit path — the question-answer
+    /// twin of `ApprovalCardView.resolveInStore`). Builds the hook
+    /// `updatedInput` the same way Open Island does: the original tool input
+    /// object with an `answers` map (question text → chosen label / freeform
+    /// text) merged in, so Claude Code treats the question as answered. A
+    /// no-op if the entry is already gone (timeout fired first) — safe to
+    /// call unconditionally.
+    func answerQuestion(sessionID: String, answers: [String: String]) {
+        guard let approval = pending.first(where: { $0.sessionID == sessionID }) else { return }
+        var updatedInput = approval.toolInput
+        updatedInput["answers"] = .object(answers.mapValues { AnyJSON.string($0) })
+        decide(approval.id, as: .allowWithInput(updatedInput))
     }
 
     private func archive(_ approval: PendingApproval, outcome: ResolvedApproval.Outcome) {
@@ -247,7 +248,7 @@ final class ClaudeCodeStore: ObservableObject {
             existing.projectDirectory = payload.projectDirectory ?? existing.projectDirectory
             sessions[id] = existing
         } else {
-            sessions[id] = SessionState(
+            sessions[id] = ClaudeCodeSessionState(
                 id: id,
                 firstSeenAt: now,
                 lastEventAt: now,
@@ -347,7 +348,7 @@ final class ClaudeCodeStore: ObservableObject {
             existing.lastUserPrompt = trimmed
             sessions[id] = existing
         } else {
-            sessions[id] = SessionState(
+            sessions[id] = ClaudeCodeSessionState(
                 id: id,
                 firstSeenAt: now,
                 lastEventAt: now,
@@ -411,7 +412,7 @@ final class ClaudeCodeStore: ObservableObject {
             }
             sessions[id] = existing
         } else {
-            sessions[id] = SessionState(
+            sessions[id] = ClaudeCodeSessionState(
                 id: id,
                 firstSeenAt: now,
                 lastEventAt: now,
@@ -511,45 +512,6 @@ final class ClaudeCodeStore: ObservableObject {
         }
     }
 
-    /// Decodes Claude Code's `AskUserQuestion` payload into a structured
-    /// `AIQuestion`. Supports both the simple `{ question: "..." }`
-    /// shape and the richer `{ questions: [{ question, options }] }`
-    /// shape — we pick the *first* sub-question of the latter, which is
-    /// what the CLI itself does. Each option is given a `K<n>` shortcut
-    /// label so the UI can render keyboard hints.
-    private static func parseAskUserQuestion(from toolInput: [String: AnyJSON]) -> AIQuestion? {
-        // Shape 1: top-level question string, no options.
-        if case let .string(s)? = toolInput["question"], !s.isEmpty {
-            return AIQuestion(text: s, options: [])
-        }
-        // Shape 2: structured `questions: [{ question, options: [...] }]`.
-        guard case let .array(arr)? = toolInput["questions"],
-              case let .object(first)? = arr.first,
-              case let .string(text)? = first["question"],
-              !text.isEmpty
-        else { return nil }
-
-        var options: [AIQuestion.Option] = []
-        if case let .array(rawOptions)? = first["options"] {
-            for (index, raw) in rawOptions.enumerated() {
-                let label: String?
-                switch raw {
-                case .string(let s):
-                    label = s
-                case .object(let obj):
-                    // Some agents wrap each option in `{ label: "..." }`.
-                    if case let .string(s)? = obj["label"] { label = s }
-                    else if case let .string(s)? = obj["text"] { label = s }
-                    else { label = nil }
-                default:
-                    label = nil
-                }
-                guard let label, !label.isEmpty else { continue }
-                options.append(.init(id: "K\(index + 1)", label: label))
-            }
-        }
-        return AIQuestion(text: text, options: options)
-    }
 }
 
 // MARK: - Models
@@ -572,6 +534,7 @@ struct ResolvedApproval: Identifiable, Equatable {
         case .decided(.allow):                       return "Allowed"
         case .decided(.allowAlways):                 return "Allowed (always)"
         case .decided(.allowWith(let suggestion)):   return suggestion.displayLabel
+        case .decided(.allowWithInput):              return "Answered"
         case .decided(.deny):                        return "Denied"
         case .decided(.ask):                         return "Deferred to CLI"
         case .timedOut:                              return "Timed out"
@@ -580,7 +543,7 @@ struct ResolvedApproval: Identifiable, Equatable {
 
     var statusTint: Color {
         switch outcome {
-        case .decided(.allow), .decided(.allowAlways), .decided(.allowWith): return .green
+        case .decided(.allow), .decided(.allowAlways), .decided(.allowWith), .decided(.allowWithInput): return .green
         case .decided(.deny):     return .red
         case .decided(.ask):      return .secondary
         case .timedOut:           return .orange
@@ -651,7 +614,7 @@ struct PendingApproval: Identifiable, Equatable {
     }
 }
 
-struct SessionState: Identifiable, Equatable {
+struct ClaudeCodeSessionState: Identifiable, Equatable {
     let id: String
     var firstSeenAt: Date
     var lastEventAt: Date
@@ -687,6 +650,11 @@ enum ApprovalDecision: Equatable {
     /// Allow + apply exactly one of Claude Code's suggestions, e.g. "Always
     /// allow Bash in /project/" or "Switch to acceptEdits".
     case allowWith(PermissionSuggestion)
+    /// Allow + hand Claude Code a rewritten `tool_input` — the mechanism
+    /// Open Island uses to answer an `AskUserQuestion` (the original tool
+    /// input with an `answers` map merged in). Serializes to
+    /// `decision.{behavior:"allow", updatedInput:<input>}`.
+    case allowWithInput([String: AnyJSON])
     case deny
     /// "Defer to Claude Code's native UI" — the bridge returns an empty
     /// `hookSpecificOutput` so the CLI shows its own prompt. Used when the
@@ -710,6 +678,11 @@ enum ApprovalDecision: Equatable {
             return Self.responseJSON(decision: [
                 "behavior": "allow",
                 "updatedPermissions": [suggestion.asResponseDict],
+            ])
+        case .allowWithInput(let updatedInput):
+            return Self.responseJSON(decision: [
+                "behavior": "allow",
+                "updatedInput": updatedInput.mapValues(\.foundationObject),
             ])
         case .deny:
             return Self.responseJSON(decision: ["behavior": "deny"])

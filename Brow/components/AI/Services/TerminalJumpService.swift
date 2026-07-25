@@ -24,13 +24,15 @@ import Foundation
 @MainActor
 enum TerminalJumpService {
 
-    /// Try to activate the terminal that owns `task`. Plays a chiptune
+    /// Try to activate the terminal that owns `session`. Plays a chiptune
     /// confirmation on success and a failure tone + transient toast when
     /// the captured terminal isn't running. Returns the outcome so
-    /// callers (UI tests, future automation) can branch on it.
+    /// callers (UI tests, future automation) can branch on it. Keyed off
+    /// `AgentSession.jumpTarget.terminalApp` (already the terminal's bundle
+    /// id, per that field's own doc comment).
     @discardableResult
-    static func jump(to task: AITask) -> Bool {
-        guard let hint = task.terminalAppHint, !hint.isEmpty else {
+    static func jump(to session: AgentSession) -> Bool {
+        guard let hint = session.jumpTarget?.terminalApp, !hint.isEmpty else {
             ClaudeCodeStore.shared.surfaceLocalNotice("No terminal recorded for this session")
             AISoundEffects.play(.jumpFailed)
             return false

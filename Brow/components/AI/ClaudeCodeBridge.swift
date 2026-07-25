@@ -20,6 +20,10 @@ final class ClaudeCodeBridge: ObservableObject {
     @Published private(set) var lastError: String?
     @Published private(set) var lastEvent: ClaudeCodeIncomingEvent?
     @Published private(set) var totalEventsSeen: Int = 0
+    /// Runtime context (terminal app, tty, cwd) from the most recently
+    /// ingested envelope. Later tasks use this to enrich events; storing it
+    /// here keeps this task's scope to parsing + routing only.
+    private(set) var lastContext: AgentBridgeEnvelope.HookRuntimeContextDTO?
 
     private var listener: NWListener?
     private var connections: [NWConnection] = []
@@ -131,30 +135,87 @@ final class ClaudeCodeBridge: ObservableObject {
     private func handle(request: HTTPRequest) async -> HTTPResponse {
         switch (request.method, request.path) {
         case ("POST", "/event"):
-            guard let parsed = ClaudeCodeIncomingEvent.decode(from: request.body) else {
+            guard let envelope = try? AgentBridgeEnvelope.decode(request.body) else {
+                return .badRequest("Could not parse event JSON")
+            }
+            lastContext = envelope.context
+
+            switch envelope.source {
+            case "claude":
+                break
+            default:
+                NSLog("ClaudeCodeBridge: unhandled source: \(envelope.source)")
+                return .ok(jsonBody: "{}")
+            }
+
+            guard let payloadData = try? JSONSerialization.data(withJSONObject: envelope.payloadJSON),
+                  let parsed = ClaudeCodeIncomingEvent.decode(from: payloadData) else {
                 return .badRequest("Could not parse event JSON")
             }
             ingest(parsed)
+
+            // ADDITIVE mirror (Task 1.7): fold the same event into the new
+            // `AIAppModel`/`SessionState` reducer alongside the existing
+            // `ClaudeCodeStore` calls below. Pure state mirror only — no
+            // side effects, doesn't touch the store's approval queue or
+            // continuation registry. `handle` already runs on the main
+            // actor (see `receive`'s `Task { @MainActor in ... }`), so no
+            // extra hop is needed to reach `@MainActor AIAppModel`.
+            let mirroredEvents = ClaudeEventMapping.mapClaudeEvent(parsed, context: envelope.context)
+
             switch parsed.event {
             case .sessionStart(let payload):
                 ClaudeCodeStore.shared.recordSessionStart(payload)
+                AIAppModel.shared.ingest(mirroredEvents)
                 return .ok(jsonBody: "{}")
             case .sessionEnd(let payload):
                 ClaudeCodeStore.shared.recordSessionEnd(payload)
+                AIAppModel.shared.ingest(mirroredEvents)
                 return .ok(jsonBody: "{}")
             case .userPromptSubmit(let payload):
                 ClaudeCodeStore.shared.recordUserPrompt(payload)
+                AIAppModel.shared.ingest(mirroredEvents)
                 return .ok(jsonBody: "{}")
             case .permissionRequest(let payload):
+                // Task 1.8 fix: ingest the mirrored `.permissionRequested`
+                // event BEFORE the blocking store call (not after, as Task
+                // 1.7 left it), so `AIAppModel` shows `.waitingForApproval`
+                // live while the user is actually deciding, not only once
+                // the decision has already been made.
+                AIAppModel.shared.ingest(mirroredEvents)
                 // Suspends until the user decides in the notch, a saved
                 // rule matches, or the store's 55s timeout fires.
                 let body = await ClaudeCodeStore.shared.handlePermissionRequest(payload, rawJSON: parsed.rawJSON)
+                // Reflect the resolution in the mirror so it leaves
+                // `.waitingForApproval` once the store has decided.
+                // `handlePermissionRequest` returns only the serialized
+                // hook-response body (String), not an `ApprovalDecision`
+                // value — recovering allow/deny from that string to call
+                // `AIAppModel.shared.approve(sessionID:_:)` would mean
+                // parsing the store's hook JSON back out (fragile: `.ask`
+                // serializes to `"{}"` with no decision key at all), and
+                // the store is out of scope to change here. `.actionableStateResolved`
+                // is the reducer's decision-agnostic exit from
+                // `.waitingForApproval`/`.waitingForAnswer` back to
+                // `.running`, so use that instead — it needs only the
+                // session id, which we already have.
+                if let sessionID = payload.sessionID {
+                    AIAppModel.shared.ingest([
+                        .actionableStateResolved(ActionableStateResolved(
+                            sessionID: sessionID,
+                            summary: "Permission resolved.",
+                            timestamp: Date()
+                        ))
+                    ])
+                }
                 return .ok(jsonBody: body)
             case .notification(let payload):
                 ClaudeCodeStore.shared.recordNotification(payload)
+                AIAppModel.shared.ingest(mirroredEvents)
                 return .ok(jsonBody: "{}")
             case .stop(let payload):
                 ClaudeCodeStore.shared.recordStop(payload)
+                AIAppModel.shared.ingest(mirroredEvents)
                 return .ok(jsonBody: "{}")
             case .unknown:
                 return .ok(jsonBody: "{}")
@@ -169,6 +230,33 @@ final class ClaudeCodeBridge: ObservableObject {
     private func ingest(_ event: ClaudeCodeIncomingEvent) {
         lastEvent = event
         totalEventsSeen += 1
+    }
+}
+
+// MARK: - Agent bridge envelope
+
+/// The enriched envelope `BrowAgentHook` POSTs: `{"source","payload","context"}`.
+/// Back-compat: a raw Claude hook payload with no top-level `"source"` key
+/// (the shape the legacy inline-curl hook still sends) is treated as
+/// `source == "claude"` with the whole object as the payload.
+struct AgentBridgeEnvelope {
+    let source: String
+    let payloadJSON: [String: Any]
+    let context: HookRuntimeContextDTO?
+
+    struct HookRuntimeContextDTO: Decodable { var terminalApp: String?; var tty: String?; var terminalSessionID: String?; var cwd: String? }
+
+    static func decode(_ data: Data) throws -> AgentBridgeEnvelope {
+        guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw NSError(domain: "AgentBridge", code: 1)
+        }
+        if let source = obj["source"] as? String, let payload = obj["payload"] as? [String: Any] {
+            let ctx = (obj["context"] as? [String: Any]).flatMap {
+                try? JSONDecoder().decode(HookRuntimeContextDTO.self, from: JSONSerialization.data(withJSONObject: $0))
+            }
+            return AgentBridgeEnvelope(source: source, payloadJSON: payload, context: ctx)
+        }
+        return AgentBridgeEnvelope(source: "claude", payloadJSON: obj, context: nil)
     }
 }
 
