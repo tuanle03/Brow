@@ -20,8 +20,12 @@ CORE_SOURCE_FILES = %w[
   JumpTarget.swift
   PermissionModels.swift
   QuestionModels.swift
+  AgentSession.swift
 ].freeze
-TEST_FILE = 'ValueTypeTests.swift'
+TEST_FILES = %w[
+  ValueTypeTests.swift
+  AgentSessionVisibilityTests.swift
+].freeze
 
 project = Xcodeproj::Project.open(PROJECT_PATH)
 
@@ -54,12 +58,14 @@ puts "Ensured #{CORE_SOURCE_FILES.join(', ')} are in the Brow target's Sources p
 tests_group = project.main_group['BrowTests']
 raise "Could not find 'BrowTests' group" unless tests_group
 
-test_file_ref = tests_group.files.find { |f| f.path == TEST_FILE }
-test_file_ref ||= tests_group.new_file(TEST_FILE)
-unless test_target.source_build_phase.files_references.include?(test_file_ref)
-  test_target.add_file_references([test_file_ref])
+TEST_FILES.each do |filename|
+  test_file_ref = tests_group.files.find { |f| f.path == filename }
+  test_file_ref ||= tests_group.new_file(filename)
+  unless test_target.source_build_phase.files_references.include?(test_file_ref)
+    test_target.add_file_references([test_file_ref])
+  end
 end
-puts "Ensured #{TEST_FILE} is in the BrowTests target's Sources phase"
+puts "Ensured #{TEST_FILES.join(', ')} are in the BrowTests target's Sources phase"
 
 project.save
 puts "Saved #{PROJECT_PATH}"
