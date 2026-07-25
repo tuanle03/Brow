@@ -41,7 +41,12 @@ struct SessionState: Equatable, Sendable {
     /// already created a session record from any event, not just
     /// `SessionStart`. `actionableStateResolved` is deliberately excluded —
     /// it only makes sense against a session already in an actionable
-    /// phase, so it can't conjure one into existence.
+    /// phase, so it can't conjure one into existence. `sessionCompleted` is
+    /// also excluded: `ClaudeEventMapping` maps Claude's `.stop` hook
+    /// (end-of-turn, no `isSessionEnd`) to this case too, so upserting here
+    /// would let a missed-SessionStart session's first-ever event be a
+    /// `Stop` that immediately synthesizes-then-completes it — a spurious
+    /// "done" card for a session never seen running.
     mutating func apply(_ event: AgentEvent) {
         switch event {
         case let .sessionStarted(payload):
@@ -114,7 +119,15 @@ struct SessionState: Equatable, Sendable {
             upsert(session)
 
         case let .sessionCompleted(payload):
-            guard var session = upsertedSession(id: payload.sessionID, timestamp: payload.timestamp) else {
+            // Guard-on-existence only (no upsert): `ClaudeEventMapping` maps
+            // Claude's `.stop` hook (end-of-TURN, fires every turn boundary,
+            // no `isSessionEnd`) to this case too. If a `Stop` were the
+            // first event seen for a missed-SessionStart id, upserting would
+            // synthesize a session the case body immediately marks
+            // `.completed` — a spurious "done" card for a session the user
+            // never saw start or run. A completion for an unknown session
+            // has nothing sensible to attach to, so drop it.
+            guard var session = sessionsByID[payload.sessionID], payload.timestamp >= session.updatedAt else {
                 return
             }
 
@@ -129,6 +142,10 @@ struct SessionState: Equatable, Sendable {
             upsert(session)
 
         case let .jumpTargetUpdated(payload):
+            // ponytail: upserts like activityUpdated/permissionRequested,
+            // but no mapper produces this case yet (Claude/Codex event
+            // mapping doesn't emit it) — revisit for the same isSessionEnd-
+            // style false-positive risk as sessionCompleted once one does.
             guard var session = upsertedSession(id: payload.sessionID, timestamp: payload.timestamp) else {
                 return
             }
@@ -138,6 +155,7 @@ struct SessionState: Equatable, Sendable {
             upsert(session)
 
         case let .sessionMetadataUpdated(payload):
+            // ponytail: same "no producer yet" note as jumpTargetUpdated above.
             guard var session = upsertedSession(id: payload.sessionID, timestamp: payload.timestamp) else {
                 return
             }

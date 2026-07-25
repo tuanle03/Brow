@@ -76,6 +76,32 @@ final class SessionStateTests: XCTestCase {
         XCTAssertTrue(createdViaPermission?.isVisibleInIsland ?? false)
     }
 
+    /// Fix round 1: `sessionCompleted` must NOT upsert-on-unknown, unlike
+    /// `activityUpdated`/`permissionRequested`. `ClaudeEventMapping` maps
+    /// Claude's `.stop` hook (end-of-turn, no `isSessionEnd`) to this same
+    /// case, so if a `Stop` were the first event seen for a missed-
+    /// SessionStart id, upserting would synthesize-then-immediately-complete
+    /// a session the user never saw start or run — a spurious "done" card.
+    func testSessionCompletedForUnknownSessionCreatesNothing() {
+        var st = SessionState()
+        st.apply(.sessionCompleted(.init(sessionID: "never-started", summary: "done", timestamp: ts(1))))
+        XCTAssertTrue(st.sessionsByID.isEmpty)
+
+        // Contrast: the actionable signals the mid-flight scenario needs
+        // still upsert for the same unknown id.
+        var st2 = SessionState()
+        st2.apply(.activityUpdated(.init(sessionID: "never-started", summary: "hi", phase: .running, timestamp: ts(1))))
+        XCTAssertNotNil(st2.sessionsByID["never-started"])
+
+        var st3 = SessionState()
+        st3.apply(.permissionRequested(.init(
+            sessionID: "never-started",
+            request: PermissionRequest(id: "p", title: "t", summary: "s", affectedPath: "", toolName: "Bash"),
+            timestamp: ts(1)
+        )))
+        XCTAssertNotNil(st3.sessionsByID["never-started"])
+    }
+
     func testTwoMissEviction() {
         var st = SessionState()
         st.apply(.sessionStarted(.init(sessionID: "s1", title: "r", tool: .claudeCode, summary: "", timestamp: ts(1))))
