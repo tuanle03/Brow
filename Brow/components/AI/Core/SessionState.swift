@@ -7,10 +7,11 @@ import Foundation
 /// PURITY (hard constraint): no `Date()`/`Date.now`, no randomness, no I/O,
 /// no singletons. Every mutation driven by `apply(_:)` reads its timestamp
 /// off the incoming event. `resolvePermission`/`answerQuestion` are directly
-/// invoked (not event-sourced) and have no timestamp to read, so they leave
-/// `updatedAt` untouched rather than reaching for `Date()`. This purity is
-/// what makes the whole session lifecycle unit-testable without wall-clock
-/// flakiness — see `BrowTests/SessionStateTests.swift`.
+/// invoked (not event-sourced) and have no event to read a timestamp off,
+/// so the caller supplies one explicitly (`at timestamp: Date`) rather than
+/// this reducer reaching for `Date()`. This purity is what makes the whole
+/// session lifecycle unit-testable without wall-clock flakiness — see
+/// `BrowTests/SessionStateTests.swift`.
 struct SessionState: Equatable, Sendable {
     var sessionsByID: [String: AgentSession]
 
@@ -152,9 +153,9 @@ struct SessionState: Equatable, Sendable {
         }
     }
 
-    // MARK: - Directly-invoked mutations (no event, no timestamp)
+    // MARK: - Directly-invoked mutations (no event, caller supplies timestamp)
 
-    mutating func resolvePermission(sessionID: String, _ resolution: PermissionResolution) {
+    mutating func resolvePermission(sessionID: String, _ resolution: PermissionResolution, at timestamp: Date) {
         guard var session = sessionsByID[sessionID] else {
             return
         }
@@ -170,10 +171,11 @@ struct SessionState: Equatable, Sendable {
             session.summary = "Permission denied in Open Island."
         }
 
+        session.updatedAt = timestamp
         upsert(session)
     }
 
-    mutating func answerQuestion(sessionID: String, answers: [String: String]) {
+    mutating func answerQuestion(sessionID: String, answers: [String: String], at timestamp: Date) {
         guard var session = sessionsByID[sessionID] else {
             return
         }
@@ -187,6 +189,7 @@ struct SessionState: Equatable, Sendable {
         }.joined(separator: " · ")
 
         session.summary = renderedAnswers.isEmpty ? "Answered the question." : "Answered: \(renderedAnswers)"
+        session.updatedAt = timestamp
         upsert(session)
     }
 

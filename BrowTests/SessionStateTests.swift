@@ -36,9 +36,10 @@ final class SessionStateTests: XCTestCase {
             request: PermissionRequest(id: "p", title: "t", summary: "s", affectedPath: "", toolName: "Bash"),
             timestamp: ts(2)
         )))
-        st.resolvePermission(sessionID: "s1", .allowOnce())
+        st.resolvePermission(sessionID: "s1", .allowOnce(), at: ts(100))
         XCTAssertNil(st.sessionsByID["s1"]?.permissionRequest)
         XCTAssertEqual(st.sessionsByID["s1"]?.phase, .running)
+        XCTAssertEqual(st.sessionsByID["s1"]?.updatedAt, ts(100)) // bumps updatedAt so 1.7's recency sort picks it up
     }
 
     func testCompletionAndMonotonicUpdatedAt() {
