@@ -345,24 +345,34 @@ git commit -m "feat(hook): install BrowAgentHook binary; retire inline-curl hook
 
 ### Task 1.1: Add the `BrowTests` unit-test target
 
+> **Execution order:** run this task **before Task 0.3** — Task 0.3's test needs this target to exist.
+
 **Files:**
-- Modify: `Brow.xcodeproj/project.pbxproj`
-- Create: `BrowTests/PlaceholderTests.swift`
+- Modify: `Brow.xcodeproj/project.pbxproj` (via the `xcodeproj` Ruby gem — do NOT hand-edit)
+- Create: `BrowTests/SmokeTests.swift`
 
 **Interfaces:**
 - Produces: an XCTest target `BrowTests` with `@testable import Brow`, runnable via `xcodebuild test -scheme Brow -only-testing:BrowTests`.
 
-- [ ] **Step 1: Create the test target**
+- [ ] **Step 1: Create the test target with the `xcodeproj` gem**
 
-Add a "Unit Testing Bundle" target `BrowTests`, host application `Brow`, macOS 14. Ensure the `Brow` scheme's Test action includes it.
+Write a small Ruby script using the installed `xcodeproj` gem (1.27.0) to add a `com.apple.product-type.bundle.unit-test` target named `BrowTests`, host application `Brow`, macOS 14 deployment, `@testable`-capable (host app, not a standalone bundle), and add it to the `Brow` scheme's Test action. Do **not** hand-edit `project.pbxproj`. Keep the script at `tools/xcodeproj/add_browtests.rb` for reproducibility.
 
-- [ ] **Step 2: Add a trivial passing test**
+- [ ] **Step 2: Add one real smoke test on existing shipping code**
 
 ```swift
 import XCTest
 @testable import Brow
-final class PlaceholderTests: XCTestCase { func testTrue() { XCTAssertTrue(true) } }
+
+/// Bootstraps the test harness with a real assertion on existing code
+/// (superseded by ValueTypeTests in Task 1.2). Asserts a genuine invariant.
+final class SmokeTests: XCTestCase {
+    func testAgentKindDisplayName() {
+        XCTAssertEqual(AIAgentKind.claudeCode.displayName, "Claude Code")
+    }
+}
 ```
+(If `AIAgentKind.claudeCode.displayName` differs, assert its real current value — the point is a non-trivial assertion on existing code, not a placeholder.)
 
 - [ ] **Step 3: Run the test suite**
 
