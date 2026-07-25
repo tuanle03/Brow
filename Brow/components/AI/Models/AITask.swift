@@ -125,15 +125,6 @@ enum AITaskStatus: Equatable {
     }
 }
 
-/// Which sub-view the panel should render. Derived from the registry's
-/// `tasks` — the UI never sets this directly.
-enum AIPanelMode: Equatable {
-    case monitor                    // no blocking state — show task list
-    case approve(taskID: String)    // a task has `pendingApproval`
-    case ask(taskID: String)        // a task has `askingQuestion`
-    case jump                       // user clicked a row; placeholder for future
-}
-
 /// Decoded `AskUserQuestion` payload. v1 surfaces this as a notification
 /// because the Claude Code hook API only round-trips allow/deny, not
 /// arbitrary answers — but storing the structured options now means PR D

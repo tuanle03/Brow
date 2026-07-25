@@ -14,10 +14,18 @@
 //  `size` default here is a preview stand-in only.
 //
 
+import Defaults
 import SwiftUI
 
 struct V8ClosedPill: View {
     var content: ClosedPillContent
+
+    /// `ContentView`'s `@Namespace var albumArtNamespace` — threaded down so
+    /// the `.music` case's album art can `matchedGeometryEffect` into
+    /// `NotchHomeView`'s open player (`AlbumArtView`'s `albumArtImage` uses
+    /// the same id/namespace). Without this the closed→open morph only ran
+    /// one-sided and popped instead of animating.
+    var albumArtNamespace: Namespace.ID
 
     /// Only read for `.aiAttention` — the winning session, looked up by the
     /// caller from `AIAppModel.state.sessionsByID[sessionID]`. Kept as a
@@ -76,7 +84,7 @@ struct V8ClosedPill: View {
                 .frame(width: 24, height: 24)
 
         case .music:
-            V8ClosedPillMusic()
+            V8ClosedPillMusic(albumArtNamespace: albumArtNamespace)
 
         case .mascot:
             BrowMascot(state: mascotState, size: 20)
@@ -88,20 +96,17 @@ struct V8ClosedPill: View {
 }
 
 /// `.music` case — a restyle of Brow's existing closed-notch music layout
-/// onto the v8 ink palette: album art on the left, a marquee title on the
-/// right, same as `ContentView.MusicLiveActivity`. That original is a
-/// private `@ViewBuilder` method on `ContentView` (bound to its own
-/// `albumArtNamespace` / `coordinator` / `vm`), not an extractable `View`
-/// type — and this task's scope explicitly excludes touching `ContentView`.
-/// So rather than duplicating `ContentView`, this reads the same
-/// `MusicManager.shared` source of truth and reuses the same `MarqueeText`
-/// component the original wraps, preserving the album-art + marquee
-/// behavior the brief asks to keep. The sneak-peek/expanding-view artist
-/// line and `matchedGeometryEffect` (namespace-bound, `ContentView`-only)
-/// aren't reproduced — they're `ContentView` layout details, not this
-/// slot's content.
+/// (the deleted `ContentView.MusicLiveActivity`, see `git show
+/// 78cbf6f~1:Brow/ContentView.swift`) onto the v8 ink palette: album art
+/// (morphing into `NotchHomeView`'s open player via `albumArtNamespace`) on
+/// the left, title + artist in the middle, spectrum visualizer (or Lottie
+/// idle animation) on the right.
 private struct V8ClosedPillMusic: View {
     @ObservedObject private var musicManager = MusicManager.shared
+    @Default(.useMusicVisualizer) private var useMusicVisualizer
+    @Default(.coloredSpectrogram) private var coloredSpectrogram
+
+    let albumArtNamespace: Namespace.ID
 
     var body: some View {
         HStack(spacing: 8) {
@@ -109,15 +114,40 @@ private struct V8ClosedPillMusic: View {
                 .resizable()
                 .clipped()
                 .clipShape(RoundedRectangle(cornerRadius: MusicPlayerImageSizes.cornerRadiusInset.closed))
+                .matchedGeometryEffect(id: "albumArt", in: albumArtNamespace)
                 .frame(width: 20, height: 20)
 
-            MarqueeText(
-                .constant(musicManager.songTitle),
-                font: .caption,
-                textColor: V6Palette.paper,
-                minDuration: 0.4,
-                frameWidth: 90
-            )
+            VStack(alignment: .leading, spacing: 1) {
+                MarqueeText(
+                    .constant(musicManager.songTitle),
+                    font: .caption,
+                    textColor: V6Palette.paper,
+                    minDuration: 0.4,
+                    frameWidth: 72
+                )
+                Text(musicManager.artistName)
+                    .font(.system(size: 9))
+                    .foregroundStyle(V6Palette.paper.opacity(0.6))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+
+            if useMusicVisualizer {
+                Rectangle()
+                    .fill(
+                        coloredSpectrogram
+                            ? Color(nsColor: musicManager.avgColor).gradient
+                            : Color.gray.gradient
+                    )
+                    .frame(width: 16, height: 12)
+                    .mask {
+                        AudioSpectrumView(isPlaying: $musicManager.isPlaying)
+                            .frame(width: 16, height: 12)
+                    }
+            } else {
+                LottieAnimationContainer()
+                    .frame(width: 16, height: 12)
+            }
         }
     }
 }
@@ -127,6 +157,7 @@ private struct V8ClosedPillMusic: View {
 #Preview("V8ClosedPill — aiAttention") {
     V8ClosedPill(
         content: .aiAttention(sessionID: "s1"),
+        albumArtNamespace: Namespace().wrappedValue,
         attentionSession: AgentSession(id: "s1", tool: .claudeCode, phase: .waitingForApproval),
         attentionCount: 2,
         size: getClosedNotchSize()
@@ -136,25 +167,25 @@ private struct V8ClosedPillMusic: View {
 }
 
 #Preview("V8ClosedPill — aiRunning") {
-    V8ClosedPill(content: .aiRunning, size: getClosedNotchSize())
+    V8ClosedPill(content: .aiRunning, albumArtNamespace: Namespace().wrappedValue, size: getClosedNotchSize())
         .padding(24)
         .background(Color.black)
 }
 
 #Preview("V8ClosedPill — music") {
-    V8ClosedPill(content: .music, size: getClosedNotchSize())
+    V8ClosedPill(content: .music, albumArtNamespace: Namespace().wrappedValue, size: getClosedNotchSize())
         .padding(24)
         .background(Color.black)
 }
 
 #Preview("V8ClosedPill — mascot") {
-    V8ClosedPill(content: .mascot, size: getClosedNotchSize())
+    V8ClosedPill(content: .mascot, albumArtNamespace: Namespace().wrappedValue, size: getClosedNotchSize())
         .padding(24)
         .background(Color.black)
 }
 
 #Preview("V8ClosedPill — empty") {
-    V8ClosedPill(content: .empty, size: getClosedNotchSize())
+    V8ClosedPill(content: .empty, albumArtNamespace: Namespace().wrappedValue, size: getClosedNotchSize())
         .padding(24)
         .background(Color.black)
 }

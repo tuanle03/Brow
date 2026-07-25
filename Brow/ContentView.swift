@@ -339,6 +339,7 @@ struct ContentView: View {
                           // music sneak-peek is expanding.
                           V8ClosedPill(
                               content: v8ClosedPillContent,
+                              albumArtNamespace: albumArtNamespace,
                               attentionSession: v8AttentionSession(for: v8ClosedPillContent),
                               attentionCount: v8AttentionCount,
                               mascotState: mascotFlashState ?? .idle,
@@ -531,6 +532,20 @@ struct ContentView: View {
                 doOpen()
             }
         } else {
+            // A completion card showing right now is about to lose its
+            // `.task(id:)` auto-dismiss timer below — collapsing the notch
+            // (or the global cleanup flipping `coordinator.currentView`
+            // away from `.ai`) tears down `IslandSurfaceView` before its 5s
+            // sleep finishes, so `dismissCompletion` never runs. Record the
+            // dismissal now, while the surface is still resolvable, so the
+            // same completion doesn't re-present on the next manual AI-tab
+            // open (checked before any state mutation below).
+            if coordinator.currentView == .ai,
+               case let .completionCard(sessionID) = currentIslandSurface,
+               let session = AIAppModel.shared.state.sessionsByID[sessionID] {
+                AIAppModel.shared.dismissCompletion(session)
+            }
+
             // Per-screen close — runs on every screen regardless of who
             // cleared the global flag. Critically, this is independent
             // of `coordinator.currentView` because the first screen will

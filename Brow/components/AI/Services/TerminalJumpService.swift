@@ -24,32 +24,12 @@ import Foundation
 @MainActor
 enum TerminalJumpService {
 
-    /// Try to activate the terminal that owns `task`. Plays a chiptune
+    /// Try to activate the terminal that owns `session`. Plays a chiptune
     /// confirmation on success and a failure tone + transient toast when
     /// the captured terminal isn't running. Returns the outcome so
-    /// callers (UI tests, future automation) can branch on it.
-    @discardableResult
-    static func jump(to task: AITask) -> Bool {
-        guard let hint = task.terminalAppHint, !hint.isEmpty else {
-            ClaudeCodeStore.shared.surfaceLocalNotice("No terminal recorded for this session")
-            AISoundEffects.play(.jumpFailed)
-            return false
-        }
-        guard let app = findApp(matching: hint) else {
-            ClaudeCodeStore.shared.surfaceLocalNotice("\(hint) isn't running")
-            AISoundEffects.play(.jumpFailed)
-            return false
-        }
-        activate(app)
-        AISoundEffects.play(.jump)
-        return true
-    }
-
-    /// Task 2.7: v8 `SessionRowView` row-tap overload — same best-effort
-    /// activate-by-hint logic as `jump(to: AITask)`, keyed off
-    /// `AgentSession.jumpTarget.terminalApp` (already the terminal's
-    /// bundle id, per that field's own doc comment) instead of building a
-    /// throwaway `AITask` just to reuse the legacy entry point.
+    /// callers (UI tests, future automation) can branch on it. Keyed off
+    /// `AgentSession.jumpTarget.terminalApp` (already the terminal's bundle
+    /// id, per that field's own doc comment).
     @discardableResult
     static func jump(to session: AgentSession) -> Bool {
         guard let hint = session.jumpTarget?.terminalApp, !hint.isEmpty else {
