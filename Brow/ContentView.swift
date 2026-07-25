@@ -35,6 +35,16 @@ struct ContentView: View {
     /// others stuck open.
     @State private var notchWasOpenBeforeAI: Bool = false
 
+    /// Task 2.7: brief `.approved`/`.denied` flash for the v8 closed pill's
+    /// `.mascot` case, set from `claudeStore.recentlyResolved` (still the
+    /// live source of truth for decisions) and self-cleared back to nil
+    /// (→ `.idle`) after `mascotFlashDuration` — mirrors the `hoverTask`/
+    /// `notchWasOpenBeforeAI` self-cancelling `Task` idiom already used in
+    /// this file rather than adding a new timer abstraction.
+    @State private var mascotFlashState: BrowMascot.MascotState?
+    @State private var mascotFlashTask: Task<Void, Never>?
+    private let mascotFlashDuration: Duration = .seconds(1.2)
+
     @State private var gestureProgress: CGFloat = .zero
 
     @State private var haptics: Bool = false
@@ -139,8 +149,15 @@ struct ContentView: View {
                 mainLayout
                     .frame(height: vm.notchState == .open ? vm.notchSize.height : nil)
                     .conditionalModifier(true) { view in
+                        // Task 2.7: close timing aligned to the v8 spec's
+                        // reference morph (open: spring 0.42/0.8, close:
+                        // smooth 0.3s) — `currentNotchShape` is the single
+                        // `NotchShape` instance both states clip through,
+                        // so this animation interpolates its corner radii
+                        // (`NotchShape.animatableData`) rather than
+                        // cross-fading two shapes.
                         let openAnimation = Animation.spring(response: 0.42, dampingFraction: 0.8, blendDuration: 0)
-                        let closeAnimation = Animation.spring(response: 0.45, dampingFraction: 1.0, blendDuration: 0)
+                        let closeAnimation = Animation.smooth(duration: 0.3)
                         
                         return view
                             .animation(vm.notchState == .open ? openAnimation : closeAnimation, value: vm.notchState)
@@ -236,6 +253,9 @@ struct ContentView: View {
         .onChange(of: claudeStore.shouldAutoExpand) { _, shouldExpand in
             handleAIAutoExpansionChange(shouldExpand)
         }
+        .onChange(of: claudeStore.recentlyResolved.first?.id) { _, newID in
+            handleDecisionResolved(newID)
+        }
         .onChange(of: vm.anyDropZoneTargeting) { _, isTargeted in
             anyDropDebounceTask?.cancel()
 
@@ -309,20 +329,24 @@ struct ContentView: View {
                       } else if coordinator.sneakPeek.show && Defaults[.inlineHUD] && (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && vm.notchState == .closed {
                           InlineHUD(type: $coordinator.sneakPeek.type, value: $coordinator.sneakPeek.value, icon: $coordinator.sneakPeek.icon, hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
                               .transition(.opacity)
-                      } else if !coordinator.expandingView.show && vm.notchState == .closed && coordinator.currentView == .ai && !vm.hideOnClosed {
-                          // AI tab selected — closed notch reflects what
-                          // the user was viewing, just like the music
-                          // branch below does for the home tab. Mascot
-                          // state + badge come from AITaskRegistry.
-                          AILiveActivity(vm: vm)
-                              .frame(alignment: .center)
-                      } else if (!coordinator.expandingView.show || coordinator.expandingView.type == .music) && vm.notchState == .closed && (musicManager.isPlaying || !musicManager.isPlayerIdle) && coordinator.musicLiveActivityEnabled && !vm.hideOnClosed {
-                          MusicLiveActivity()
-                              .frame(alignment: .center)
+                      } else if (!coordinator.expandingView.show || coordinator.expandingView.type == .music) && vm.notchState == .closed && !vm.hideOnClosed && v8ClosedPillContent != .empty {
+                          // Task 2.7: single precedence-driven pill —
+                          // AI-attention > AI-running > music > mascot —
+                          // replacing the old ad-hoc AI-tab / Music /
+                          // BrowFaceAnimation branches. The `|| type ==
+                          // .music` clause preserves the old Music branch's
+                          // one exception: still show while the dedicated
+                          // music sneak-peek is expanding.
+                          V8ClosedPill(
+                              content: v8ClosedPillContent,
+                              attentionSession: v8AttentionSession(for: v8ClosedPillContent),
+                              attentionCount: v8AttentionCount,
+                              mascotState: mascotFlashState ?? .idle,
+                              size: vm.closedNotchSize
+                          )
+                          .frame(alignment: .center)
                       } else if !coordinator.expandingView.show && vm.notchState == .closed && (!musicManager.isPlaying && musicManager.isPlayerIdle) && Defaults[.selectedIdleVisualizer] != nil && !vm.hideOnClosed {
                           IdleLottieActivity()
-                      } else if !coordinator.expandingView.show && vm.notchState == .closed && (!musicManager.isPlaying && musicManager.isPlayerIdle) && Defaults[.showNotHumanFace] && !vm.hideOnClosed  {
-                          BrowFaceAnimation()
                        } else if vm.notchState == .open {
                            BrowHeader()
                                .frame(height: max(24, vm.effectiveClosedNotchHeight))
@@ -377,7 +401,11 @@ struct ContentView: View {
                 VStack {
                     switch coordinator.currentView {
                     case .ai:
-                        AIPanel()
+                        IslandSurfaceView(
+                            surface: currentIslandSurface,
+                            model: AIAppModel.shared,
+                            onJump: { session in TerminalJumpService.jump(to: session) }
+                        )
                     case .home:
                         NotchHomeView(albumArtNamespace: albumArtNamespace)
                     case .shelf:
@@ -637,6 +665,97 @@ struct ContentView: View {
                     }
                 }
             }
+        }
+    }
+
+    // MARK: - Task 2.7: v8 surface mount
+
+    /// Which v8 card the open `.ai` tab shows right now. Kept here rather
+    /// than as an `AIAppModel` computed property so Core stays free of a
+    /// `ClaudeCodeStore` dependency (`AIAppModel` is an additive pure
+    /// mirror per Task 1.7's doc comment) — this is the one place that's
+    /// allowed to read both.
+    ///
+    /// - An attention-requiring session (approval/question) always wins,
+    ///   most-recently-updated first — same tiebreak as
+    ///   `AIAppModel.closedPillContent`.
+    /// - Else, a session that JUST finished (`claudeStore`'s `.stopped`
+    ///   toast, still the live signal for "Claude is done") shows its
+    ///   completion card — this reuses the store's existing 5s toast
+    ///   timer as the completion card's auto-dismiss, no new timer needed.
+    /// - Else, the session list.
+    private var currentIslandSurface: IslandSurface {
+        let model = AIAppModel.shared
+        if let attention = model.state.sessionsByID.values
+            .filter(\.isVisibleInIsland)
+            .filter(\.phase.requiresAttention)
+            .max(by: { $0.updatedAt < $1.updatedAt })
+        {
+            switch attention.phase {
+            case .waitingForApproval: return .approvalCard(sessionID: attention.id)
+            case .waitingForAnswer:   return .questionCard(sessionID: attention.id)
+            default: break
+            }
+        }
+        if let notification = claudeStore.transientNotification,
+           case .stopped = notification.kind,
+           let sessionID = notification.sessionID,
+           model.state.sessionsByID[sessionID]?.phase == .completed
+        {
+            return .completionCard(sessionID: sessionID)
+        }
+        return .sessionList
+    }
+
+    /// Precedence-resolved content for the closed-notch `V8ClosedPill`.
+    /// Reuses the coordinator/`Defaults` flags the old ad-hoc branches read
+    /// (`musicLiveActivityEnabled` + `isPlaying`/`isPlayerIdle` for music,
+    /// `showNotHumanFace` for the idle mascot) — `mascotEnabled` also
+    /// requires no `selectedIdleVisualizer` chosen, preserving the old
+    /// branch order where a custom Lottie idle visualizer always won over
+    /// the built-in mascot (`IdleLottieActivity` stays a separate fallback
+    /// below this pill for that case).
+    private var v8ClosedPillContent: ClosedPillContent {
+        AIAppModel.shared.closedPillContent(
+            musicPlaying: (musicManager.isPlaying || !musicManager.isPlayerIdle) && coordinator.musicLiveActivityEnabled,
+            mascotEnabled: showNotHumanFace && Defaults[.selectedIdleVisualizer] == nil
+        )
+    }
+
+    /// The session backing a `.aiAttention` pill, and how many sessions are
+    /// currently tied for that slot (`V8ClosedPill`'s trailing count badge).
+    private func v8AttentionSession(for content: ClosedPillContent) -> AgentSession? {
+        guard case let .aiAttention(sessionID) = content else { return nil }
+        return AIAppModel.shared.state.sessionsByID[sessionID]
+    }
+
+    private var v8AttentionCount: Int {
+        AIAppModel.shared.state.sessionsByID.values
+            .filter { $0.isVisibleInIsland && $0.phase.requiresAttention }
+            .count
+    }
+
+    /// Fires a brief `.approved`/`.denied` mascot flash whenever a new
+    /// entry lands at the head of `claudeStore.recentlyResolved` (a fresh
+    /// decision, not merely `recentlyResolved` mutating in some other way —
+    /// `newID` only changes when index 0 itself changes). Self-clears back
+    /// to `nil` (→ `.idle`) after `mascotFlashDuration`, cancelling any
+    /// still-pending clear from a previous flash so back-to-back decisions
+    /// each get their own full window.
+    private func handleDecisionResolved(_ newID: UUID?) {
+        guard newID != nil, let outcome = claudeStore.recentlyResolved.first?.outcome else { return }
+        let flash: BrowMascot.MascotState
+        switch outcome {
+        case .decided(.deny):  flash = .denied
+        case .decided:         flash = .approved
+        case .timedOut:        return
+        }
+        mascotFlashTask?.cancel()
+        mascotFlashState = flash
+        mascotFlashTask = Task {
+            try? await Task.sleep(for: mascotFlashDuration)
+            guard !Task.isCancelled else { return }
+            await MainActor.run { mascotFlashState = nil }
         }
     }
 

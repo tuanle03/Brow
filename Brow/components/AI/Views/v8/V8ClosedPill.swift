@@ -28,6 +28,15 @@ struct V8ClosedPill: View {
     /// trailing count when > 1 — mirrors `BrowMascot`'s own badge rule.
     var attentionCount: Int = 1
 
+    /// Task 2.7: state for the `.mascot` case's `BrowMascot`. By the time
+    /// `.mascot` wins the precedence resolver there's no attention/running
+    /// session left to derive `.attention`/`.working` from (those outrank
+    /// `.mascot`) — the only thing left to show is a brief `.approved`/
+    /// `.denied` flash right after the caller resolves a decision, else
+    /// `.idle`. Caller (`ContentView`) computes and passes this; kept as a
+    /// parameter so this view stays a pure renderer.
+    var mascotState: BrowMascot.MascotState = .idle
+
     var size: CGSize = CGSize(width: 150, height: 32)
 
     var body: some View {
@@ -70,7 +79,7 @@ struct V8ClosedPill: View {
             V8ClosedPillMusic()
 
         case .mascot:
-            BrowMascot(state: .idle, size: 20)
+            BrowMascot(state: mascotState, size: 20)
 
         case .empty:
             EmptyView()

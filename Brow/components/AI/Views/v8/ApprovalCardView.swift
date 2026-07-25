@@ -14,6 +14,17 @@
 //  function (not inlined in the button action) specifically so
 //  `CardActionTests` can assert its shape without going through SwiftUI.
 //
+//  Task 2.7: buttons ALSO resolve the matching `ClaudeCodeStore.pending`
+//  entry (looked up by `session.id`, which is the literal Claude session
+//  id `PendingApproval.sessionID` carries — see `ClaudeEventMapping`) via
+//  `ClaudeCodeStore.decide(_:as:)`, the exact method `AIApproveSection`
+//  (the old card, via `AITaskRegistry.decide`) and the global keyboard
+//  shortcuts (`decideHead`) already round-trip through. That store still
+//  owns the live `withCheckedContinuation` registry until Task 2.9, so
+//  this is what actually completes the bridge's HTTP response back to
+//  Claude Code — `model.approve` only keeps the `AIAppModel` mirror in
+//  sync, it has no side effect on its own.
+//
 
 import SwiftUI
 
@@ -50,17 +61,20 @@ struct ApprovalCardView: View {
             HStack(spacing: 8) {
                 Button(request?.secondaryActionTitle ?? "Deny") {
                     model.approve(sessionID: session.id, .deny())
+                    Self.resolveInStore(sessionID: session.id, as: .deny)
                 }
                 .buttonStyle(IslandActionButtonStyle(kind: .secondary, expands: true))
 
                 Button(request?.primaryActionTitle ?? "Allow once") {
                     model.approve(sessionID: session.id, .allowOnce())
+                    Self.resolveInStore(sessionID: session.id, as: .allow)
                 }
                 .buttonStyle(IslandActionButtonStyle(kind: .warning, expands: true))
 
                 if let toolName = request?.toolName {
                     Button("Always allow \(toolName)") {
                         model.approve(sessionID: session.id, Self.alwaysAllowResolution(toolName: toolName))
+                        Self.resolveInStore(sessionID: session.id, as: .allowAlways)
                     }
                     .buttonStyle(IslandActionButtonStyle(kind: .primary, expands: true))
                 }
@@ -80,6 +94,18 @@ struct ApprovalCardView: View {
         let rule = ClaudePermissionRuleValue(toolName: toolName)
         let update = ClaudePermissionUpdate.addRules(destination: .session, rules: [rule], behavior: .allow)
         return .allowOnce(updatedPermissions: [update])
+    }
+
+    /// Completes the real bridge round-trip. Looks up the live
+    /// `PendingApproval` for this session (FIFO queue, keyed by a `UUID`
+    /// distinct from `AgentSession.id`) and resolves it via the same
+    /// `ClaudeCodeStore.decide(_:as:)` the old card and the keyboard
+    /// shortcuts use. A no-op if the entry is already gone (e.g. resolved
+    /// via a shortcut a moment earlier) — safe to call unconditionally.
+    private static func resolveInStore(sessionID: String, as decision: ApprovalDecision) {
+        guard let approvalID = ClaudeCodeStore.shared.pending.first(where: { $0.sessionID == sessionID })?.id
+        else { return }
+        ClaudeCodeStore.shared.decide(approvalID, as: decision)
     }
 }
 

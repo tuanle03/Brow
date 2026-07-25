@@ -45,6 +45,28 @@ enum TerminalJumpService {
         return true
     }
 
+    /// Task 2.7: v8 `SessionRowView` row-tap overload — same best-effort
+    /// activate-by-hint logic as `jump(to: AITask)`, keyed off
+    /// `AgentSession.jumpTarget.terminalApp` (already the terminal's
+    /// bundle id, per that field's own doc comment) instead of building a
+    /// throwaway `AITask` just to reuse the legacy entry point.
+    @discardableResult
+    static func jump(to session: AgentSession) -> Bool {
+        guard let hint = session.jumpTarget?.terminalApp, !hint.isEmpty else {
+            ClaudeCodeStore.shared.surfaceLocalNotice("No terminal recorded for this session")
+            AISoundEffects.play(.jumpFailed)
+            return false
+        }
+        guard let app = findApp(matching: hint) else {
+            ClaudeCodeStore.shared.surfaceLocalNotice("\(hint) isn't running")
+            AISoundEffects.play(.jumpFailed)
+            return false
+        }
+        activate(app)
+        AISoundEffects.play(.jump)
+        return true
+    }
+
     // MARK: - Internals
 
     /// Matches the captured hint against the localized name or bundle id
