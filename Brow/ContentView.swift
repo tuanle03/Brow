@@ -406,6 +406,19 @@ struct ContentView: View {
                             model: AIAppModel.shared,
                             onJump: { session in TerminalJumpService.jump(to: session) }
                         )
+                        // Auto-dismiss the completion card ~5s after it
+                        // appears (the old store toast's timer, moved to
+                        // the surface). `.task(id:)` cancels/restarts when
+                        // the surface changes, so a resolved card's timer
+                        // is torn down the moment the surface flips away.
+                        .task(id: currentIslandSurface) {
+                            guard case let .completionCard(sessionID) = currentIslandSurface else { return }
+                            try? await Task.sleep(for: .seconds(5))
+                            guard !Task.isCancelled,
+                                  let session = AIAppModel.shared.state.sessionsByID[sessionID]
+                            else { return }
+                            AIAppModel.shared.dismissCompletion(session)
+                        }
                     case .home:
                         NotchHomeView(albumArtNamespace: albumArtNamespace)
                     case .shelf:
@@ -557,10 +570,11 @@ struct ContentView: View {
     /// - An attention-requiring session (approval/question) always wins,
     ///   most-recently-updated first — same tiebreak as
     ///   `AIAppModel.closedPillContent`.
-    /// - Else, a session that JUST finished (`claudeStore`'s `.stopped`
-    ///   toast, still the live signal for "Claude is done") shows its
-    ///   completion card — this reuses the store's existing 5s toast
-    ///   timer as the completion card's auto-dismiss, no new timer needed.
+    /// - Else, a session that JUST finished shows its completion card,
+    ///   driven off `AIAppModel.completionCardSession(now:)` (a recently
+    ///   completed, non-stale, not-yet-dismissed session) rather than
+    ///   `claudeStore`'s `.stopped` toast — the `.task(id:)` on the surface
+    ///   view below auto-dismisses it after 5s (`dismissCompletion`).
     /// - Else, the session list.
     private var currentIslandSurface: IslandSurface {
         let model = AIAppModel.shared
@@ -575,12 +589,8 @@ struct ContentView: View {
             default: break
             }
         }
-        if let notification = claudeStore.transientNotification,
-           case .stopped = notification.kind,
-           let sessionID = notification.sessionID,
-           model.state.sessionsByID[sessionID]?.phase == .completed
-        {
-            return .completionCard(sessionID: sessionID)
+        if let completed = model.completionCardSession(now: Date()) {
+            return .completionCard(sessionID: completed.id)
         }
         return .sessionList
     }

@@ -55,6 +55,37 @@ final class AIAppModel {
         state.answerQuestion(sessionID: sessionID, answers: answers, at: Date())
     }
 
+    // MARK: - Task 2.9: completion-card driver
+
+    /// Session id → the `updatedAt` at which its completion card was last
+    /// dismissed. A session re-completing with a newer `updatedAt` shows its
+    /// card again — matching the old per-`Stop` toast, which fired a fresh
+    /// notification on every completion of the same session.
+    private(set) var dismissedCompletions: [String: Date] = [:]
+
+    /// The session whose completion card should show right now: the
+    /// most-recently-completed visible session that isn't stale and whose
+    /// latest completion hasn't been dismissed. Replaces the old coupling to
+    /// `ClaudeCodeStore.transientNotification`'s `.stopped` toast. `now` is a
+    /// parameter (not read internally) to stay wall-clock-free/testable.
+    func completionCardSession(now: Date) -> AgentSession? {
+        state.sessionsByID.values
+            .filter { $0.isVisibleInIsland && $0.phase == .completed }
+            .filter { !$0.isStaleCompleted(now: now) }
+            .filter { session in
+                guard let dismissedAt = dismissedCompletions[session.id] else { return true }
+                return session.updatedAt > dismissedAt
+            }
+            .max(by: { $0.updatedAt < $1.updatedAt })
+    }
+
+    /// Marks this session's current completion as seen so its card stops
+    /// showing (called by the auto-dismiss timer or a manual dismiss).
+    /// Idempotent; a later completion with a newer `updatedAt` re-shows.
+    func dismissCompletion(_ session: AgentSession) {
+        dismissedCompletions[session.id] = session.updatedAt
+    }
+
     /// Task 2.2: the closed-pill glyph's mode, aggregated over sessions
     /// visible in the island (`AgentSession.isVisibleInIsland`). Pure —
     /// reads only `state`. Precedence: a session needing approval/answer

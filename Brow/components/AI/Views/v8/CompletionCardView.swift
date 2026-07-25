@@ -12,10 +12,11 @@
 //  handles (bold/italic/code/links), so there's nothing here a
 //  block-level-aware renderer buys over the stdlib parser.
 //
-//  The reply field is a stub per the brief: 2.9 moves the
-//  `withCheckedContinuation` registry into `AIAppModel`, which is what a
-//  real send needs to round-trip through. For now `onReply` just receives
-//  the typed text and the field clears — no bridge call yet.
+//  The reply field is a stub: a real send needs a follow-up-prompt
+//  round-trip Brow's hook bridge doesn't expose (Task 2.9 took its safety
+//  valve and left the approval continuation in `ClaudeCodeStore` rather
+//  than moving it). For now `onReply` just receives the typed text and the
+//  field clears — no bridge call yet.
 //
 
 import SwiftUI
