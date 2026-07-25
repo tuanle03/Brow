@@ -52,10 +52,85 @@ struct V8ClosedPill: View {
 
     var size: CGSize = CGSize(width: 150, height: 32)
 
+    /// Physical-notch cutout width for THIS screen, or `0` on a display with
+    /// no notch. Non-zero switches the pill to the MacBook split layout:
+    /// content in the two lanes flanking the cutout, nothing in the center
+    /// span where the camera housing would hide it. Resolved per-screen by
+    /// `ContentView` (`screenHasNotch(vm.screenUUID)`), so each window adapts
+    /// to its own display automatically.
+    var notchWidth: CGFloat = 0
+
+    private var isNotched: Bool { notchWidth > 0 }
+
+    /// Per-side lane width in the notched layout. Music needs room for album
+    /// art + a short marquee; the glyph/mascot cases only need the 24pt glyph
+    /// (reference `V6ClosedPill.macbookBody` reserves 44). Left and right
+    /// lanes are always equal so the reserved center gap stays centered on
+    /// the cutout.
+    private var laneWidth: CGFloat { content == .music ? 74 : 44 }
+
     var body: some View {
-        inner
-            .padding(.horizontal, 10)
-            .frame(width: size.width, height: size.height)
+        if isNotched {
+            macbookInner
+                .frame(width: notchedClosedPillWidth(notchWidth: notchWidth, laneWidth: laneWidth),
+                       height: size.height)
+        } else {
+            inner
+                .padding(.horizontal, 10)
+                .frame(width: size.width, height: size.height)
+        }
+    }
+
+    /// MacBook split: left lane · reserved notch span · right lane. The
+    /// center `Spacer` is exactly the cutout width so no content ever lands
+    /// under the physical notch.
+    @ViewBuilder
+    private var macbookInner: some View {
+        if content == .music {
+            // Music owns its own MusicManager, so it does the split
+            // internally (album+marquee left, spectrum right) — same equal
+            // lanes, keyed off the same `laneWidth`.
+            V8ClosedPillMusic(albumArtNamespace: albumArtNamespace, notchWidth: notchWidth, laneWidth: laneWidth)
+        } else {
+            HStack(spacing: 0) {
+                laneLeft.frame(width: laneWidth, alignment: .leading)
+                Spacer().frame(width: notchWidth)
+                laneRight.frame(width: laneWidth, alignment: .trailing)
+            }
+        }
+    }
+
+    /// Left lane content for the non-music notched cases (the glyph/mascot).
+    @ViewBuilder
+    private var laneLeft: some View {
+        switch content {
+        case .aiAttention:
+            UnifiedBarsGlyph(
+                mode: .waiting,
+                tint: IslandStatus.tint(for: attentionSession?.phase ?? .waitingForApproval)
+            )
+            .frame(width: 24, height: 24)
+        case .aiRunning:
+            UnifiedBarsGlyph(mode: .running).frame(width: 24, height: 24)
+        case .mascot:
+            BrowMascot(state: mascotState, size: 20)
+        case .music, .empty:
+            EmptyView()
+        }
+    }
+
+    /// Right lane content: only `.aiAttention` has a trailing slot (the
+    /// multi-session count); the others leave the right lane empty (it still
+    /// reserves width, keeping the cutout gap centered).
+    @ViewBuilder
+    private var laneRight: some View {
+        if case .aiAttention = content, attentionCount > 1 {
+            Text("\(attentionCount)")
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .foregroundStyle(V6Palette.paper.opacity(0.85))
+        } else {
+            EmptyView()
+        }
     }
 
     @ViewBuilder
@@ -105,46 +180,84 @@ private struct V8ClosedPillMusic: View {
 
     let albumArtNamespace: Namespace.ID
 
+    /// Non-zero → notched display: reserve this center span for the physical
+    /// notch (album+title in the left lane, spectrum in the right), instead of
+    /// spanning content across the cutout.
+    var notchWidth: CGFloat = 0
+    /// Per-side lane width in the notched layout (set by the parent so the
+    /// pill's outer frame and this content agree on width — no slack, so the
+    /// reserved gap stays centered on the cutout).
+    var laneWidth: CGFloat = 0
+
     var body: some View {
-        HStack(spacing: 8) {
-            Image(nsImage: musicManager.albumArt)
-                .resizable()
-                .clipped()
-                .clipShape(RoundedRectangle(cornerRadius: MusicPlayerImageSizes.cornerRadiusInset.closed))
-                .matchedGeometryEffect(id: "albumArt", in: albumArtNamespace)
-                .frame(width: 20, height: 20)
-
-            VStack(alignment: .leading, spacing: 1) {
-                MarqueeText(
-                    .constant(musicManager.songTitle),
-                    font: .caption,
-                    textColor: V6Palette.paper,
-                    minDuration: 0.4,
-                    frameWidth: 72
-                )
-                Text(musicManager.artistName)
-                    .font(.system(size: 9))
-                    .foregroundStyle(V6Palette.paper.opacity(0.6))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
-
-            if useMusicVisualizer {
-                Rectangle()
-                    .fill(
-                        coloredSpectrogram
-                            ? Color(nsColor: musicManager.avgColor).gradient
-                            : Color.gray.gradient
+        if notchWidth > 0 {
+            HStack(spacing: 0) {
+                HStack(spacing: 8) {
+                    albumArt
+                    MarqueeText(
+                        .constant(musicManager.songTitle),
+                        font: .caption,
+                        textColor: V6Palette.paper,
+                        minDuration: 0.4,
+                        frameWidth: max(0, laneWidth - 28)
                     )
-                    .frame(width: 16, height: 12)
-                    .mask {
-                        AudioSpectrumView(isPlaying: $musicManager.isPlaying)
-                            .frame(width: 16, height: 12)
-                    }
-            } else {
-                LottieAnimationContainer()
-                    .frame(width: 16, height: 12)
+                }
+                .frame(width: laneWidth, alignment: .leading)
+
+                Spacer().frame(width: notchWidth)
+
+                spectrum.frame(width: laneWidth, alignment: .trailing)
             }
+        } else {
+            HStack(spacing: 8) {
+                albumArt
+
+                VStack(alignment: .leading, spacing: 1) {
+                    MarqueeText(
+                        .constant(musicManager.songTitle),
+                        font: .caption,
+                        textColor: V6Palette.paper,
+                        minDuration: 0.4,
+                        frameWidth: 72
+                    )
+                    Text(musicManager.artistName)
+                        .font(.system(size: 9))
+                        .foregroundStyle(V6Palette.paper.opacity(0.6))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+
+                spectrum
+            }
+        }
+    }
+
+    private var albumArt: some View {
+        Image(nsImage: musicManager.albumArt)
+            .resizable()
+            .clipped()
+            .clipShape(RoundedRectangle(cornerRadius: MusicPlayerImageSizes.cornerRadiusInset.closed))
+            .matchedGeometryEffect(id: "albumArt", in: albumArtNamespace)
+            .frame(width: 20, height: 20)
+    }
+
+    @ViewBuilder
+    private var spectrum: some View {
+        if useMusicVisualizer {
+            Rectangle()
+                .fill(
+                    coloredSpectrogram
+                        ? Color(nsColor: musicManager.avgColor).gradient
+                        : Color.gray.gradient
+                )
+                .frame(width: 16, height: 12)
+                .mask {
+                    AudioSpectrumView(isPlaying: $musicManager.isPlaying)
+                        .frame(width: 16, height: 12)
+                }
+        } else {
+            LottieAnimationContainer()
+                .frame(width: 16, height: 12)
         }
     }
 }

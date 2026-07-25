@@ -102,6 +102,40 @@ final class SessionStateTests: XCTestCase {
         XCTAssertNotNil(st3.sessionsByID["never-started"])
     }
 
+    /// Title backfill: a mid-flight upserted session starts with the generic
+    /// "Claude Code" fallback; the first later event that names its project
+    /// (derived from cwd) must replace it, and a real title must never be
+    /// clobbered by a generic/missing incoming one.
+    func testTitleBackfillFromLaterEvent() {
+        // Missed SessionStart → upserted with the generic fallback title.
+        var st = SessionState()
+        st.apply(.activityUpdated(.init(sessionID: "s1", summary: "hi", phase: .running, timestamp: ts(1))))
+        XCTAssertEqual(st.sessionsByID["s1"]?.title, SessionState.genericFallbackTitle)
+
+        // A later event carrying a real project name backfills it.
+        st.apply(.activityUpdated(.init(sessionID: "s1", summary: "You: go", phase: .running, timestamp: ts(2), title: "Brow")))
+        XCTAssertEqual(st.sessionsByID["s1"]?.title, "Brow")
+
+        // A subsequent generic/missing title must not clobber the real one.
+        st.apply(.permissionRequested(.init(
+            sessionID: "s1",
+            request: PermissionRequest(id: "p", title: "t", summary: "s", affectedPath: "", toolName: "Bash"),
+            timestamp: ts(3),
+            title: nil
+        )))
+        XCTAssertEqual(st.sessionsByID["s1"]?.title, "Brow")
+    }
+
+    func testBackfilledTitleRule() {
+        // Adopt a real name over the fallback / empty.
+        XCTAssertEqual(SessionState.backfilledTitle(current: SessionState.genericFallbackTitle, incoming: "Brow"), "Brow")
+        XCTAssertEqual(SessionState.backfilledTitle(current: "", incoming: "Brow"), "Brow")
+        // Never clobber a real title, never adopt a generic/empty/nil one.
+        XCTAssertEqual(SessionState.backfilledTitle(current: "Brow", incoming: "docs"), "Brow")
+        XCTAssertEqual(SessionState.backfilledTitle(current: "Brow", incoming: nil), "Brow")
+        XCTAssertEqual(SessionState.backfilledTitle(current: SessionState.genericFallbackTitle, incoming: SessionState.genericFallbackTitle), SessionState.genericFallbackTitle)
+    }
+
     func testTwoMissEviction() {
         var st = SessionState()
         st.apply(.sessionStarted(.init(sessionID: "s1", title: "r", tool: .claudeCode, summary: "", timestamp: ts(1))))

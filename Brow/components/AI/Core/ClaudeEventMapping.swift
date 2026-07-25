@@ -62,7 +62,8 @@ enum ClaudeEventMapping {
                 sessionID: sessionID,
                 summary: "You: \(short(trimmed, max: 80))",
                 phase: .running,
-                timestamp: timestamp
+                timestamp: timestamp,
+                title: titleFromCwd(p.cwd)
             )
             return [.activityUpdated(activity)]
 
@@ -79,7 +80,8 @@ enum ClaudeEventMapping {
             let requested = PermissionRequested(
                 sessionID: sessionID,
                 request: buildPermissionRequest(p),
-                timestamp: timestamp
+                timestamp: timestamp,
+                title: titleFromCwd(p.projectDirectory ?? p.cwd)
             )
             return [.permissionRequested(requested)]
 
@@ -106,9 +108,17 @@ enum ClaudeEventMapping {
     // MARK: - SessionStart helpers
 
     private static func sessionTitle(cwd: String?) -> String {
-        guard let cwd, !cwd.isEmpty else { return "Claude Code" }
+        guard let cwd, !cwd.isEmpty else { return SessionState.genericFallbackTitle }
         let base = (cwd as NSString).lastPathComponent
-        return base.isEmpty ? "Claude Code" : base
+        return base.isEmpty ? SessionState.genericFallbackTitle : base
+    }
+
+    /// Project title for the reducer's mid-flight backfill: the derived
+    /// project name, or `nil` when `cwd` yields only the generic fallback (so
+    /// the backfill has nothing better to adopt and leaves the title alone).
+    private static func titleFromCwd(_ cwd: String?) -> String? {
+        let derived = sessionTitle(cwd: cwd)
+        return derived == SessionState.genericFallbackTitle ? nil : derived
     }
 
     private static func sessionStartSummary(source: String?) -> String {

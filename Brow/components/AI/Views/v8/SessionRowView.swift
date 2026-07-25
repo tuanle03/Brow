@@ -39,13 +39,13 @@ struct SessionRowView: View {
                     .frame(width: 8, height: 8)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(session.spotlightHeadline)
+                    Text(session.spotlightWorkspaceName)
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(V6Palette.paper)
                         .lineLimit(1)
                         .truncationMode(.tail)
 
-                    Text(session.summary)
+                    Text(session.rowSubtitle)
                         .font(.system(size: 11))
                         .foregroundStyle(V6Palette.paper.opacity(0.6))
                         .lineLimit(1)
@@ -100,28 +100,41 @@ struct SessionRowView: View {
         .buttonStyle(.plain)
     }
 
+    /// Expanded detail. The earlier duplicate-line fix left this returning
+    /// nil for any running/completed session, so the chevron toggled an empty
+    /// view — nothing happened. Now it shows real per-session context, each
+    /// line omitted when its field is empty (the session id always renders, so
+    /// expand is never blank). `spotlightWorkspaceName` is already the row
+    /// title, so the working directory here is the full path, not the name.
     @ViewBuilder
     private var detail: some View {
-        if let detailText {
-            Text(detailText)
-                .font(.system(size: 11))
-                .foregroundStyle(V6Palette.paper.opacity(0.7))
-                .fixedSize(horizontal: false, vertical: true)
+        VStack(alignment: .leading, spacing: 3) {
+            if let request = session.permissionRequest {
+                detailLine(request.summary)
+            } else if let prompt = session.questionPrompt {
+                detailLine(prompt.title)
+            }
+            if let dir = session.jumpTarget?.workingDirectory, !dir.isEmpty {
+                detailLine(dir, mono: true)
+            }
+            if let prompt = session.latestUserPromptText {
+                detailLine("You: \(prompt)")
+            }
+            if let activity = session.currentActivityText {
+                detailLine(activity)
+            }
+            detailLine(session.id, mono: true, dim: true)
         }
     }
 
-    /// Extra context revealed on expand. Only the request/question detail —
-    /// falling back to `session.summary` here just reprinted the summary line
-    /// already shown collapsed (the "Permission resolved." double), so return
-    /// nil in that case and render nothing.
-    private var detailText: String? {
-        if let request = session.permissionRequest {
-            return request.summary
-        }
-        if let prompt = session.questionPrompt {
-            return prompt.title
-        }
-        return nil
+    private func detailLine(_ text: String, mono: Bool = false, dim: Bool = false) -> some View {
+        Text(text)
+            .font(.system(size: 11, design: mono ? .monospaced : .default))
+            .foregroundStyle(V6Palette.paper.opacity(dim ? 0.4 : 0.7))
+            .lineLimit(mono ? 1 : 2)
+            .truncationMode(mono ? .middle : .tail)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

@@ -51,6 +51,25 @@ enum MusicPlayerImageSizes {
     return nil
 }
 
+/// Whether *this* screen has a physical notch (camera cutout). Same
+/// detection `getClosedNotchSize` uses (`safeAreaInsets.top > 0`), pulled out
+/// so the closed pill can flank the cutout on notched displays and span
+/// freely on external ones. Per-screen: resolve the window's own `screenUUID`.
+@MainActor func screenHasNotch(screenUUID: String? = nil) -> Bool {
+    let screen = screenUUID.flatMap { NSScreen.screen(withUUID: $0) } ?? NSScreen.main
+    return (screen?.safeAreaInsets.top ?? 0) > 0
+}
+
+/// Total closed-pill width on a notched display: two equal content lanes
+/// flanking the reserved physical-notch span, so the empty center gap stays
+/// centered on the cutout (the pill is centered on screen, so equal lanes
+/// keep the gap aligned with the camera housing). `notchWidth <= 0` means the
+/// display has no notch — callers use the spanning layout instead. Pure so it
+/// can be unit-tested without a screen.
+func notchedClosedPillWidth(notchWidth: CGFloat, laneWidth: CGFloat) -> CGFloat {
+    laneWidth * 2 + max(0, notchWidth)
+}
+
 @MainActor func getClosedNotchSize(screenUUID: String? = nil) -> CGSize {
     // Default notch size, to avoid using optionals
     var notchHeight: CGFloat = Defaults[.nonNotchHeight]

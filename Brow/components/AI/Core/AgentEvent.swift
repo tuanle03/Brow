@@ -55,31 +55,41 @@ struct SessionStarted: Equatable, Codable, Sendable {
     }
 }
 
-/// Payload for `AgentEvent.activityUpdated`. Direct port, no trim.
+/// Payload for `AgentEvent.activityUpdated`. Direct port plus one additive
+/// field: `title` — a project name derived from the event's `cwd`, used by the
+/// reducer to backfill sessions that missed their `SessionStart` (and so still
+/// carry the generic "Claude Code" fallback title). `nil` when the event
+/// carried no usable cwd.
 struct SessionActivityUpdated: Equatable, Codable, Sendable {
     var sessionID: String
     var summary: String
     var phase: SessionPhase
     var timestamp: Date
+    var title: String?
 
-    init(sessionID: String, summary: String, phase: SessionPhase, timestamp: Date) {
+    init(sessionID: String, summary: String, phase: SessionPhase, timestamp: Date, title: String? = nil) {
         self.sessionID = sessionID
         self.summary = summary
         self.phase = phase
         self.timestamp = timestamp
+        self.title = title
     }
 }
 
-/// Payload for `AgentEvent.permissionRequested`. Direct port, no trim.
+/// Payload for `AgentEvent.permissionRequested`. Direct port plus the same
+/// additive `title` backfill field as `SessionActivityUpdated` (project name
+/// from the request's cwd/project_dir; `nil` when unknown).
 struct PermissionRequested: Equatable, Codable, Sendable {
     var sessionID: String
     var request: PermissionRequest
     var timestamp: Date
+    var title: String?
 
-    init(sessionID: String, request: PermissionRequest, timestamp: Date) {
+    init(sessionID: String, request: PermissionRequest, timestamp: Date, title: String? = nil) {
         self.sessionID = sessionID
         self.request = request
         self.timestamp = timestamp
+        self.title = title
     }
 }
 

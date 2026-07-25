@@ -15,8 +15,23 @@ import Foundation
 struct SessionState: Equatable, Sendable {
     var sessionsByID: [String: AgentSession]
 
+    /// Title a session gets before any `cwd`-bearing event names its project
+    /// — a mid-flight upserted session (missed `SessionStart`) starts here.
+    /// The row shows this verbatim until a later event backfills the real
+    /// project name (see `backfilledTitle`).
+    static let genericFallbackTitle = "Claude Code"
+
     init(sessionsByID: [String: AgentSession] = [:]) {
         self.sessionsByID = sessionsByID
+    }
+
+    /// Title backfill rule (pure, testable). A session that missed its
+    /// `SessionStart` carries the generic fallback title; when a later event
+    /// derives a real project name from its `cwd`, adopt it — but never let a
+    /// generic/empty incoming title clobber a real one already set.
+    static func backfilledTitle(current: String, incoming: String?) -> String {
+        guard let incoming, !incoming.isEmpty, incoming != genericFallbackTitle else { return current }
+        return (current.isEmpty || current == genericFallbackTitle) ? incoming : current
     }
 
     // MARK: - apply
@@ -91,6 +106,7 @@ struct SessionState: Equatable, Sendable {
                 if payload.phase != .waitingForAnswer { session.questionPrompt = nil }
             }
 
+            session.title = SessionState.backfilledTitle(current: session.title, incoming: payload.title)
             session.updatedAt = payload.timestamp
             upsert(session)
 
@@ -103,6 +119,7 @@ struct SessionState: Equatable, Sendable {
             session.summary = payload.request.summary
             session.permissionRequest = payload.request
             session.questionPrompt = nil
+            session.title = SessionState.backfilledTitle(current: session.title, incoming: payload.title)
             session.updatedAt = payload.timestamp
             upsert(session)
 
@@ -200,7 +217,7 @@ struct SessionState: Equatable, Sendable {
         }
         return AgentSession(
             id: id,
-            title: "Claude Code",
+            title: SessionState.genericFallbackTitle,
             tool: .claudeCode,
             attachmentState: .attached,
             updatedAt: timestamp,

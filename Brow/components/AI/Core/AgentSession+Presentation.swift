@@ -60,6 +60,31 @@ extension AgentSession {
         return spotlightWorkspaceName.isEmpty ? prompt : "\(spotlightWorkspaceName) · \(prompt)"
     }
 
+    /// The most recent user prompt for this session (latest, else the
+    /// opening one) — `nil` when neither is populated. Used for the row
+    /// subtitle and expanded detail's "You: …" line.
+    var latestUserPromptText: String? {
+        let latest = claudeMetadata?.lastUserPrompt ?? codexMetadata?.lastUserPrompt
+        let initial = claudeMetadata?.initialUserPrompt ?? codexMetadata?.initialUserPrompt
+        return (latest?.isEmpty == false ? latest : nil) ?? (initial?.isEmpty == false ? initial : nil)
+    }
+
+    /// Last tool activity ("Tool: input-preview", or just the tool name) —
+    /// `nil` when no tool is currently recorded. Shown in the expanded detail.
+    var currentActivityText: String? {
+        guard let tool = currentToolName, !tool.isEmpty else { return nil }
+        let preview = claudeMetadata?.currentToolInputPreview ?? codexMetadata?.currentCommandPreview
+        if let preview, !preview.isEmpty { return "\(tool): \(preview)" }
+        return tool
+    }
+
+    /// One-line row subtitle: the last user prompt as "You: …" when we have
+    /// one (reads like a TODO of asks), else the current status `summary`.
+    var rowSubtitle: String {
+        if let prompt = latestUserPromptText { return "You: \(prompt)" }
+        return summary
+    }
+
     /// v8 UI-only staleness: keeps `phase` unchanged, but lets callers fold
     /// older completed rows into a lower-priority/dimmed presentation.
     /// Pure — both `now` and `threshold` are caller-supplied. Ported from

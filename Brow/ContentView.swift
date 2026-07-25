@@ -371,7 +371,13 @@ struct ContentView: View {
                               attentionSession: v8AttentionSession(for: v8ClosedPillContent),
                               attentionCount: v8AttentionCount,
                               mascotState: mascotFlashState ?? .idle,
-                              size: vm.closedNotchSize
+                              size: vm.closedNotchSize,
+                              // Per-screen physical-notch avoidance: on a
+                              // notched MacBook `closedNotchSize.width` IS the
+                              // cutout width, so pass it as the reserved span
+                              // and the pill flanks it. External displays →
+                              // 0 → spanning layout unchanged.
+                              notchWidth: screenHasNotch(screenUUID: vm.screenUUID) ? vm.closedNotchSize.width : 0
                           )
                           .frame(alignment: .center)
                       } else if !coordinator.expandingView.show && vm.notchState == .closed && (!musicManager.isPlaying && musicManager.isPlayerIdle) && Defaults[.selectedIdleVisualizer] != nil && !vm.hideOnClosed {
@@ -724,14 +730,28 @@ struct ContentView: View {
             }
         } else {
             hoverTask = Task {
-                try? await Task.sleep(for: .milliseconds(100))
+                try? await Task.sleep(for: .milliseconds(180))
                 guard !Task.isCancelled else { return }
-                
+
                 await MainActor.run {
+                    // Auto-height fix (commit bdc1377): the opened AI panel
+                    // hugs its content, so a measurement/expand resizes the
+                    // panel under a stationary pointer — a subview slides out
+                    // from under the cursor and SwiftUI fires a spurious
+                    // `.onHover(false)`. Acting on it closed the notch, the
+                    // closed pill reappeared under the pointer, `.onHover(true)`
+                    // reopened it → open/close flicker loop. Gate the close on
+                    // the LIVE pointer actually being outside the island:
+                    // `isMouseHovering()` hit-tests `notchSize`, which `open()`
+                    // sets to `openNotchSize` while open — so this is the
+                    // opened panel's rect. Still inside → the exit was
+                    // spurious, keep the panel open and the hover state intact.
+                    if self.vm.isMouseHovering() { return }
+
                     withAnimation(animationSpring) {
                         self.isHovering = false
                     }
-                    
+
                     if self.vm.notchState == .open && !self.vm.isBatteryPopoverActive && !SharingStateManager.shared.preventNotchClose {
                         self.vm.close()
                     }

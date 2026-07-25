@@ -28,4 +28,19 @@ final class OpenIslandSizingTests: XCTestCase {
         // The window must physically contain the capped panel + shadow.
         XCTAssertGreaterThanOrEqual(windowSize.height, maxOpenNotchHeight + shadowPadding)
     }
+
+    // MARK: - Notched closed-pill width (physical-notch avoidance)
+
+    func testNotchedPillReservesTheCutoutBetweenEqualLanes() {
+        // 44pt lanes either side of a 200pt cutout → 288 total, gap centered.
+        XCTAssertEqual(notchedClosedPillWidth(notchWidth: 200, laneWidth: 44), 288)
+        // Music's wider lanes still stay symmetric.
+        XCTAssertEqual(notchedClosedPillWidth(notchWidth: 200, laneWidth: 74), 348)
+    }
+
+    func testNotchedPillWidthClampsNegativeNotch() {
+        // A non-notched (0 / negative) span never subtracts from the lanes.
+        XCTAssertEqual(notchedClosedPillWidth(notchWidth: 0, laneWidth: 44), 88)
+        XCTAssertEqual(notchedClosedPillWidth(notchWidth: -50, laneWidth: 44), 88)
+    }
 }
