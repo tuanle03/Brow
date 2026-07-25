@@ -153,7 +153,7 @@ final class AITaskRegistry: ObservableObject {
 
     private struct Snapshot {
         let pending: [PendingApproval]
-        let sessions: [String: SessionState]
+        let sessions: [String: ClaudeCodeSessionState]
         let transient: TransientNotification?
     }
 

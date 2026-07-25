@@ -24,7 +24,7 @@ final class ClaudeCodeStore: ObservableObject {
     /// back through prompts they may have missed. Capped to keep memory
     /// bounded.
     @Published private(set) var recentlyResolved: [ResolvedApproval] = []
-    @Published private(set) var sessions: [String: SessionState] = [:]
+    @Published private(set) var sessions: [String: ClaudeCodeSessionState] = [:]
     @Published private(set) var rules: [PermissionRule] = []
     @Published private(set) var lastRuleError: String?
     /// Transient Claude Code `Notification` payload — set when one arrives,
@@ -247,7 +247,7 @@ final class ClaudeCodeStore: ObservableObject {
             existing.projectDirectory = payload.projectDirectory ?? existing.projectDirectory
             sessions[id] = existing
         } else {
-            sessions[id] = SessionState(
+            sessions[id] = ClaudeCodeSessionState(
                 id: id,
                 firstSeenAt: now,
                 lastEventAt: now,
@@ -347,7 +347,7 @@ final class ClaudeCodeStore: ObservableObject {
             existing.lastUserPrompt = trimmed
             sessions[id] = existing
         } else {
-            sessions[id] = SessionState(
+            sessions[id] = ClaudeCodeSessionState(
                 id: id,
                 firstSeenAt: now,
                 lastEventAt: now,
@@ -411,7 +411,7 @@ final class ClaudeCodeStore: ObservableObject {
             }
             sessions[id] = existing
         } else {
-            sessions[id] = SessionState(
+            sessions[id] = ClaudeCodeSessionState(
                 id: id,
                 firstSeenAt: now,
                 lastEventAt: now,
@@ -651,7 +651,7 @@ struct PendingApproval: Identifiable, Equatable {
     }
 }
 
-struct SessionState: Identifiable, Equatable {
+struct ClaudeCodeSessionState: Identifiable, Equatable {
     let id: String
     var firstSeenAt: Date
     var lastEventAt: Date
