@@ -147,6 +147,7 @@
 		9A987A102C73CA8D005CA465 /* Collections in Frameworks */ = {isa = PBXBuildFile; productRef = 9A987A0F2C73CA8D005CA465 /* Collections */; };
 		9AB0C6BD2C73C9CB00F7CD30 /* NotchHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AB0C6BB2C73C9CB00F7CD30 /* NotchHomeView.swift */; };
 		A0164AAAD5B885483F57B771 /* IslandSurfaceMappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04799BFEABE5EAC7F5F0771B /* IslandSurfaceMappingTests.swift */; };
+		AE1050121000000000000002 /* OpenIslandSizingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE1050121000000000000001 /* OpenIslandSizingTests.swift */; };
 		A85593097E6BFC8BDEAB98FA /* QuestionCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38F6C46CB18EAE333F01388B /* QuestionCardView.swift */; };
 		ADCC0D9B3BAD46C1D703DEC3 /* ApprovalCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1488C199AD10419F3A6D3FD8 /* ApprovalCardView.swift */; };
 		AF23C5F12FC9526100654A89 /* AITask.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF23C5F02FC9526100654A89 /* AITask.swift */; };
@@ -262,6 +263,7 @@
 /* Begin PBXFileReference section */
 		004FAC3CA8BC40DFE558E562 /* ClaudeHookInstallCommandTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClaudeHookInstallCommandTests.swift; sourceTree = "<group>"; };
 		04799BFEABE5EAC7F5F0771B /* IslandSurfaceMappingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IslandSurfaceMappingTests.swift; sourceTree = "<group>"; };
+		AE1050121000000000000001 /* OpenIslandSizingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OpenIslandSizingTests.swift; sourceTree = "<group>"; };
 		07D3FE9F7444EF4D457F53B5 /* AgentEvent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AgentEvent.swift; sourceTree = "<group>"; };
 		0D911F5475B0F91CCE3E3A23 /* UnifiedBarsGlyph.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UnifiedBarsGlyph.swift; sourceTree = "<group>"; };
 		0EA7DB8CE255DD7FF015F73E /* CompletionCardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CompletionCardView.swift; sourceTree = "<group>"; };
@@ -1061,6 +1063,7 @@
 				85714159A8A881912862B7C3 /* SessionListDerivationTests.swift */,
 				A8C0A60644924EACB99937CB /* CardActionTests.swift */,
 				B9E1A2C3D4F5A6B7C8D9E0F1 /* ApprovalRoundTripTests.swift */,
+				AE1050121000000000000001 /* OpenIslandSizingTests.swift */,
 			);
 			name = BrowTests;
 			path = BrowTests;
@@ -1437,6 +1440,7 @@
 				E7903118337E5DECAABB83F1 /* SessionListDerivationTests.swift in Sources */,
 				31C3D8AA6A2F3676C2C386A2 /* CardActionTests.swift in Sources */,
 				B9E1A2C3D4F5A6B7C8D9E0F2 /* ApprovalRoundTripTests.swift in Sources */,
+				AE1050121000000000000002 /* OpenIslandSizingTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -98,6 +98,27 @@ struct ContentView: View {
         return chinWidth
     }
 
+    /// Height of the opened header lane (`BrowHeader`), matching the frame in
+    /// `NotchLayout`'s open branch.
+    private var openHeaderHeight: CGFloat { max(24, vm.effectiveClosedNotchHeight) }
+
+    /// Cap the auto-height AI surface content grows to before it scrolls.
+    /// `maxOpenNotchHeight` minus the header and the panel's bottom padding /
+    /// margin, so header + content + padding stays within the window.
+    private var openSurfaceMaxHeight: CGFloat {
+        max(120, maxOpenNotchHeight - openHeaderHeight - 24)
+    }
+
+    /// Height for the opened `mainLayout`:
+    /// - AI tab → `nil`, so the panel auto-sizes to header + the measured,
+    ///   capped surface content (the single `NotchShape` fill/clip hugs it).
+    /// - home / shelf → the fixed `openNotchSize.height` (unchanged).
+    /// - closed → `nil` (intrinsic closed-pill size).
+    private var openPanelHeight: CGFloat? {
+        guard vm.notchState == .open else { return nil }
+        return coordinator.currentView == .ai ? nil : openNotchSize.height
+    }
+
     var body: some View {
         // Calculate scale based on gesture progress only
         let gestureScale: CGFloat = {
@@ -154,7 +175,7 @@ struct ContentView: View {
                     )
                 
                 mainLayout
-                    .frame(height: vm.notchState == .open ? vm.notchSize.height : nil)
+                    .frame(height: openPanelHeight)
                     .conditionalModifier(true) { view in
                         // Task 2.7: close timing aligned to the v8 spec's
                         // reference morph (open: spring 0.42/0.8, close:
@@ -412,7 +433,8 @@ struct ContentView: View {
                         IslandSurfaceView(
                             surface: currentIslandSurface,
                             model: AIAppModel.shared,
-                            onJump: { session in TerminalJumpService.jump(to: session) }
+                            onJump: { session in TerminalJumpService.jump(to: session) },
+                            maxContentHeight: openSurfaceMaxHeight
                         )
                         // Auto-dismiss the completion card ~5s after it
                         // appears (the old store toast's timer, moved to

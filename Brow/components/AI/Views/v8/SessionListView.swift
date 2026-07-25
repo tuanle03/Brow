@@ -21,21 +21,21 @@ struct SessionListView: View {
     var onJump: (AgentSession) -> Void = { _ in }
 
     var body: some View {
+        // No inner ScrollView: the surrounding `AutoHeightScrollView`
+        // (in `IslandSurfaceView`) measures this content's natural height and
+        // owns the cap + scroll. A nested ScrollView would report a greedy /
+        // bounded height and defeat that measurement.
         VStack(alignment: .leading, spacing: 0) {
             header
 
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 0) {
-                    ForEach(sections) { section in
-                        if group != .none {
-                            sessionSectionHeader(section)
-                        }
-                        ForEach(section.sessions) { session in
-                            SessionRowView(session: session, onJump: onJump)
-                            if session.id != section.sessions.last?.id {
-                                Divider().overlay(V6Palette.paper.opacity(0.08))
-                            }
-                        }
+            ForEach(sections) { section in
+                if group != .none {
+                    sessionSectionHeader(section)
+                }
+                ForEach(section.sessions) { session in
+                    SessionRowView(session: session, onJump: onJump)
+                    if session.id != section.sessions.last?.id {
+                        Divider().overlay(V6Palette.paper.opacity(0.08))
                     }
                 }
             }
