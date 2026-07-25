@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0496E4203268AA38C69B1CD0 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 415F1D144813DEC7A6BE0385 /* Cocoa.framework */; };
 		0F9CF2690ABD2B19E29CAC9F /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A9C523551D0F063FD2B902C /* main.swift */; };
 		1100290C2E847E2800035A57 /* NSItemProvider+LoadHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1100290B2E847E2800035A57 /* NSItemProvider+LoadHelpers.swift */; };
 		110029272E84FD4C00035A57 /* TemporaryFileStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 110029262E84FD4C00035A57 /* TemporaryFileStorageService.swift */; };
@@ -114,6 +115,7 @@
 		59D8C23C2E589FAA00147B33 /* VolumeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59D8C23B2E589FAA00147B33 /* VolumeManager.swift */; };
 		82FE10C99095F5125A724237 /* BridgePost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9095869BFD9037EBD7DD3731 /* BridgePost.swift */; };
 		912304BF14946BA9A0077BB8 /* ClaudeCodeEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76DF98C0B2319A5CE47187D3 /* ClaudeCodeEvent.swift */; };
+		97B7E74624020EF870B19C7E /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C10C94F5818DBB41856030C /* SmokeTests.swift */; };
 		9A0887322C7A693000C160EA /* TabButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0887312C7A693000C160EA /* TabButton.swift */; };
 		9A0887352C7AFF8E00C160EA /* TabSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0887342C7AFF8E00C160EA /* TabSelectionView.swift */; };
 		9A987A0D2C73CA66005CA465 /* ShelfView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A987A032C73CA66005CA465 /* ShelfView.swift */; };
@@ -175,6 +177,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 11F7484E2EC9AABA00F841DB;
 			remoteInfo = BrowXPCHelper;
+		};
+		63E7A258533345CC883B3656 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 14CEF40A2C5CAED200855D72 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 14CEF4112C5CAED300855D72;
+			remoteInfo = Brow;
 		};
 		A6902B119AA282B39F9F9E25 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -320,6 +329,7 @@
 		32BA6C5A41A6A419B7511B48 /* AISettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AISettingsView.swift; sourceTree = "<group>"; };
 		415F1D144813DEC7A6BE0385 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		4A9C523551D0F063FD2B902C /* main.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		4C10C94F5818DBB41856030C /* SmokeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SmokeTests.swift; sourceTree = "<group>"; };
 		507266DA2C908E2E00A2D00D /* HoverButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoverButton.swift; sourceTree = "<group>"; };
 		5565EAB6E4A626F41BEC5B04 /* ClaudeCodeStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClaudeCodeStore.swift; sourceTree = "<group>"; };
 		5917FD102E57891600E87F1C /* MediaKeyInterceptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaKeyInterceptor.swift; sourceTree = "<group>"; };
@@ -371,6 +381,7 @@
 		C1D9BDF4095C4633816021BD /* BrowAgentHook */ = {isa = PBXFileReference; includeInIndex = 0; path = BrowAgentHook; sourceTree = BUILT_PRODUCTS_DIR; };
 		D794C4D274CC6937AEB77D3E /* AISessionsTabView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AISessionsTabView.swift; sourceTree = "<group>"; };
 		DEE90A5FC095E57C34A393C5 /* ClaudeCodeBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClaudeCodeBridge.swift; sourceTree = "<group>"; };
+		E1A4DA9D772F3F9C6716E531 /* BrowTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BrowTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		ED41C323283BA2A2C96D63C6 /* HookRuntimeContext.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HookRuntimeContext.swift; sourceTree = "<group>"; };
 		F38DE6472D8243E2008B5C6D /* BatteryActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryActivityManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -444,6 +455,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				BC4A2B9201868CCB1D8A652D /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E6557A8A5BE0CD42F19B0267 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0496E4203268AA38C69B1CD0 /* Cocoa.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -660,6 +679,7 @@
 				14CEF4132C5CAED300855D72 /* Products */,
 				14D031EC2C689DB70096E6A1 /* Frameworks */,
 				6607E3A8B930CA152BDCCE7A /* BrowAgentHook */,
+				F03C9518CE2160A3FA18180A /* BrowTests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -669,6 +689,7 @@
 				14CEF4122C5CAED300855D72 /* Brow.app */,
 				11F7484F2EC9AABA00F841DB /* BrowXPCHelper.xpc */,
 				C1D9BDF4095C4633816021BD /* BrowAgentHook */,
+				E1A4DA9D772F3F9C6716E531 /* BrowTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -930,6 +951,15 @@
 			path = Tips;
 			sourceTree = "<group>";
 		};
+		F03C9518CE2160A3FA18180A /* BrowTests */ = {
+			isa = PBXGroup;
+			children = (
+				4C10C94F5818DBB41856030C /* SmokeTests.swift */,
+			);
+			name = BrowTests;
+			path = BrowTests;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -991,6 +1021,24 @@
 			productName = dynamicNotch;
 			productReference = 14CEF4122C5CAED300855D72 /* Brow.app */;
 			productType = "com.apple.product-type.application";
+		};
+		6879CE2845C3E5D093BE0186 /* BrowTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 39B025654A82486F3E3DA35F /* Build configuration list for PBXNativeTarget "BrowTests" */;
+			buildPhases = (
+				91C9B50545045562F35F4754 /* Sources */,
+				E6557A8A5BE0CD42F19B0267 /* Frameworks */,
+				B9D0BC279B06E99591778741 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6CED7449EDC8F0C502FA557E /* PBXTargetDependency */,
+			);
+			name = BrowTests;
+			productName = BrowTests;
+			productReference = E1A4DA9D772F3F9C6716E531 /* BrowTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		D440753A34A4EA8B7AE4ABA4 /* BrowAgentHook */ = {
 			isa = PBXNativeTarget;
@@ -1056,6 +1104,7 @@
 				14CEF4112C5CAED300855D72 /* Brow */,
 				11F7484E2EC9AABA00F841DB /* BrowXPCHelper */,
 				D440753A34A4EA8B7AE4ABA4 /* BrowAgentHook */,
+				6879CE2845C3E5D093BE0186 /* BrowTests */,
 			);
 		};
 /* End PBXProject section */
@@ -1078,6 +1127,13 @@
 				112B0EB92E30DD0F00562D6C /* mediaremote-adapter.pl in Resources */,
 				B17266E12C6532560031BA0D /* Localizable.xcstrings in Resources */,
 				14A7E5972C65FD31008C1BE9 /* welcome.m4a in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B9D0BC279B06E99591778741 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1241,6 +1297,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		91C9B50545045562F35F4754 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				97B7E74624020EF870B19C7E /* SmokeTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -1248,6 +1312,12 @@
 			isa = PBXTargetDependency;
 			target = 11F7484E2EC9AABA00F841DB /* BrowXPCHelper */;
 			targetProxy = 11F748592EC9AABA00F841DB /* PBXContainerItemProxy */;
+		};
+		6CED7449EDC8F0C502FA557E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = Brow;
+			target = 14CEF4112C5CAED300855D72 /* Brow */;
+			targetProxy = 63E7A258533345CC883B3656 /* PBXContainerItemProxy */;
 		};
 		C7FB1973D507E599421B539F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1539,6 +1609,20 @@
 			};
 			name = Release;
 		};
+		1D9039951D085A44AAC98055 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = tuanle03.Brow.BrowTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Brow.app/Contents/MacOS/Brow";
+			};
+			name = Release;
+		};
 		486E2AB1361FAE5771945DCD /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1546,6 +1630,20 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		621776CE415B461B1C387152 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = tuanle03.Brow.BrowTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Brow.app/Contents/MacOS/Brow";
 			};
 			name = Debug;
 		};
@@ -1585,6 +1683,15 @@
 			buildConfigurations = (
 				14CEF4222C5CAED400855D72 /* Debug */,
 				14CEF4232C5CAED400855D72 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		39B025654A82486F3E3DA35F /* Build configuration list for PBXNativeTarget "BrowTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1D9039951D085A44AAC98055 /* Release */,
+				621776CE415B461B1C387152 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
