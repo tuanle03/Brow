@@ -206,7 +206,7 @@ enum ClaudeEventMapping {
         case "Task":
             return toolInput["description"].map { "Subagent: \(short($0.asDisplayString, max: 40))" } ?? "Running subagent"
         default:
-            return nil
+            return toolName
         }
     }
 

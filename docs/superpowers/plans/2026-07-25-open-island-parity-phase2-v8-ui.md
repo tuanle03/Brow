@@ -85,14 +85,14 @@ Deleted (2.8): `AISessionsTabView.swift`, `Mockups/AIPanelMockup.swift`, old `AI
 
 ## Task 2.6: Approval / Question / Completion cards (interactive)
 
-**Files:** Create `ApprovalCardView.swift`, `QuestionCardView.swift`, `CompletionCardView.swift`, `IslandSurfaceView.swift` (top-level renderer switching on `IslandSurface`). Add `swift-markdown-ui` SPM dep (completion markdown). Test `BrowTests/CardActionTests.swift`.
+**Files:** Create `ApprovalCardView.swift`, `QuestionCardView.swift`, `CompletionCardView.swift`, `IslandSurfaceView.swift` (top-level renderer switching on `IslandSurface`). Completion markdown renders via native `AttributedString(markdown:)`, no SPM dep. Test `BrowTests/CardActionTests.swift`.
 
 **Interfaces:** `ApprovalCardView` (Deny / Allow-once / Always-allow buttons → `AIAppModel.approve`), `QuestionCardView` (option list + freeform → `AIAppModel.answer`), `CompletionCardView` (markdown summary + optional reply). `IslandSurfaceView` renders the current `IslandSurface` from `AIAppModel`.
 
 - [ ] Build the three cards reading the actionable `AgentSession` from `AIAppModel`; wire buttons to `approve`/`answer` (these still only mutate the reducer until 2.9 moves the continuation). Interactive question answering.
 - [ ] `IslandSurfaceView` switches surface with the open/close springs + shape morph (reuse Brow's `NotchShape.animatableData`).
 - [ ] Test the button→reducer wiring (approve clears request; answer clears question) at the `AIAppModel` level. Register.
-- [ ] Add `swift-markdown-ui` via the `xcodeproj` gem (SPM dependency). Build + `#Preview` each card. Commit `feat(ai-v8): approval/question/completion cards + surface renderer`.
+- [ ] Render completion markdown via native `AttributedString(markdown:)` (no SPM dep needed). Build + `#Preview` each card. Commit `feat(ai-v8): approval/question/completion cards + surface renderer`.
 
 ---
 

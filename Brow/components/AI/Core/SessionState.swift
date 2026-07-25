@@ -168,7 +168,7 @@ struct SessionState: Equatable, Sendable {
             session.summary = "Permission approved. \(session.tool.displayName) continued the tool."
         case .deny:
             session.phase = .completed
-            session.summary = "Permission denied in Open Island."
+            session.summary = "Permission denied."
         }
 
         session.updatedAt = timestamp

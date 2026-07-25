@@ -117,7 +117,6 @@
 		14FC6E502C7DED5600C7BEA5 /* DataTypes+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14FC6E4F2C7DED5600C7BEA5 /* DataTypes+Extensions.swift */; };
 		27183DA8FC02DB2047F52729 /* AgentEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07D3FE9F7444EF4D457F53B5 /* AgentEvent.swift */; };
 		31C3D8AA6A2F3676C2C386A2 /* CardActionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8C0A60644924EACB99937CB /* CardActionTests.swift */; };
-		B9E1A2C3D4F5A6B7C8D9E0F2 /* ApprovalRoundTripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9E1A2C3D4F5A6B7C8D9E0F1 /* ApprovalRoundTripTests.swift */; };
 		3D8A9039CB32677DB3CDB507 /* SessionStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8027DC9707258E183769CB /* SessionStateTests.swift */; };
 		3E3954F521A76388B727F45C /* ClaudeEventMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BD9C34B5867B8BAB2685BCA /* ClaudeEventMapping.swift */; };
 		40A9B33EB75A0A97145C2335 /* HookRuntimeContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED41C323283BA2A2C96D63C6 /* HookRuntimeContext.swift */; };
@@ -151,7 +150,6 @@
 		A85593097E6BFC8BDEAB98FA /* QuestionCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38F6C46CB18EAE333F01388B /* QuestionCardView.swift */; };
 		ADCC0D9B3BAD46C1D703DEC3 /* ApprovalCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1488C199AD10419F3A6D3FD8 /* ApprovalCardView.swift */; };
 		AF23C5F12FC9526100654A89 /* AITask.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF23C5F02FC9526100654A89 /* AITask.swift */; };
-		AF23C5F32FC9528600654A89 /* AITaskRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF23C5F22FC9528600654A89 /* AITaskRegistry.swift */; };
 		AF23C5FF2FC95C9800654A89 /* TerminalJumpService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF23C5FE2FC95C9800654A89 /* TerminalJumpService.swift */; };
 		AF23C6012FC95D6300654A89 /* AISoundEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF23C6002FC95D6300654A89 /* AISoundEffects.swift */; };
 		AF46429E2FC845850045D431 /* IdleLottieActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF46429D2FC845850045D431 /* IdleLottieActivity.swift */; };
@@ -184,7 +182,7 @@
 		B1FEB4992C7686630066EBBC /* PanGesture.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1FEB4982C7686630066EBBC /* PanGesture.swift */; };
 		B759D8DC31930B76DD6A518B /* PermissionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADC61FA4E3EF8AFFE8A8B94C /* PermissionModels.swift */; };
 		B9947D6139EF500E4087D5D4 /* AICoreEndToEndTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5811E243ED2CE83195F1B420 /* AICoreEndToEndTests.swift */; };
-		BC4A2B9201868CCB1D8A652D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 415F1D144813DEC7A6BE0385 /* Cocoa.framework */; };
+		B9E1A2C3D4F5A6B7C8D9E0F2 /* ApprovalRoundTripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9E1A2C3D4F5A6B7C8D9E0F1 /* ApprovalRoundTripTests.swift */; };
 		C3C8375FA2E5E3D5FA9E70FA /* AIAppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07C632841AE7D96F59C2CB1 /* AIAppModel.swift */; };
 		C7DDB52001DBCD22DBD6425F /* ClaudeCodeBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEE90A5FC095E57C34A393C5 /* ClaudeCodeBridge.swift */; };
 		CC73CFFA07C3F14EE8AB2414 /* AgentTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = F67FDF7FEB2234549801EED9 /* AgentTool.swift */; };
@@ -400,10 +398,8 @@
 		9AB0C6BB2C73C9CB00F7CD30 /* NotchHomeView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotchHomeView.swift; sourceTree = "<group>"; };
 		9BD9C34B5867B8BAB2685BCA /* ClaudeEventMapping.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClaudeEventMapping.swift; sourceTree = "<group>"; };
 		A8C0A60644924EACB99937CB /* CardActionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CardActionTests.swift; sourceTree = "<group>"; };
-		B9E1A2C3D4F5A6B7C8D9E0F1 /* ApprovalRoundTripTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ApprovalRoundTripTests.swift; sourceTree = "<group>"; };
 		ADC61FA4E3EF8AFFE8A8B94C /* PermissionModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PermissionModels.swift; sourceTree = "<group>"; };
 		AF23C5F02FC9526100654A89 /* AITask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITask.swift; sourceTree = "<group>"; };
-		AF23C5F22FC9528600654A89 /* AITaskRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITaskRegistry.swift; sourceTree = "<group>"; };
 		AF23C5FE2FC95C9800654A89 /* TerminalJumpService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalJumpService.swift; sourceTree = "<group>"; };
 		AF23C6002FC95D6300654A89 /* AISoundEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AISoundEffects.swift; sourceTree = "<group>"; };
 		AF46429D2FC845850045D431 /* IdleLottieActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleLottieActivity.swift; sourceTree = "<group>"; };
@@ -432,6 +428,7 @@
 		B1F747F82EC7E94000F841DB /* LottieView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LottieView.swift; sourceTree = "<group>"; };
 		B1FEB4982C7686630066EBBC /* PanGesture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanGesture.swift; sourceTree = "<group>"; };
 		B7715291ED179E835DDBBF40 /* IslandActionButtonStyle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IslandActionButtonStyle.swift; sourceTree = "<group>"; };
+		B9E1A2C3D4F5A6B7C8D9E0F1 /* ApprovalRoundTripTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ApprovalRoundTripTests.swift; sourceTree = "<group>"; };
 		BA292F294EE4B4A7A46DC83D /* IslandSurfaceView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IslandSurfaceView.swift; sourceTree = "<group>"; };
 		BC917D774C09A3F9C7ADFF8E /* AgentSession.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AgentSession.swift; sourceTree = "<group>"; };
 		C1D9BDF4095C4633816021BD /* BrowAgentHook */ = {isa = PBXFileReference; includeInIndex = 0; path = BrowAgentHook; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -516,7 +513,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				BC4A2B9201868CCB1D8A652D /* Cocoa.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -597,7 +593,6 @@
 				8D14452ED0A9D6795FB34556 /* BrowMascot.swift */,
 				AF23C5EC2FC94D2A00654A89 /* Mockups */,
 				AF23C5EF2FC9526100654A89 /* Models */,
-				AF23C5F22FC9528600654A89 /* AITaskRegistry.swift */,
 				AF23C5F42FC952A900654A89 /* Views */,
 				AF23C5FD2FC95C9800654A89 /* Services */,
 				CE934623AA775425DD59F794 /* Core */,
@@ -1200,7 +1195,6 @@
 				14D0321B2C68F3350096E6A1 /* XCRemoteSwiftPackageReference "Sparkle" */,
 				B18654372C6F4990000B926A /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
 				9A987A0E2C73CA8D005CA465 /* XCRemoteSwiftPackageReference "swift-collections" */,
-				9A987A112C73CAA1005CA465 /* XCRemoteSwiftPackageReference "Pow" */,
 				B19016202CC15B3D00E3F12E /* XCRemoteSwiftPackageReference "Defaults" */,
 				B1628B902CC260C0003D8DF3 /* XCRemoteSwiftPackageReference "swiftui-introspect" */,
 				1194E8832EA57D23009C82D6 /* XCRemoteSwiftPackageReference "SkyLightWindow" */,
@@ -1356,7 +1350,6 @@
 				F38DE6482D8243E7008B5C6D /* BatteryActivityManager.swift in Sources */,
 				B10348D92C74E56000475897 /* ConditionalModifier.swift in Sources */,
 				118D1FD12E98FF5F00A2FF63 /* SharingStateManager.swift in Sources */,
-				AF23C5F32FC9528600654A89 /* AITaskRegistry.swift in Sources */,
 				AF23C5F12FC9526100654A89 /* AITask.swift in Sources */,
 				14D570C22C5EAFBF0011E668 /* EmptyState.swift in Sources */,
 				118EBE252E92DCCB00D54B5A /* AssociatedObject.swift in Sources */,
@@ -1904,14 +1897,6 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 1.1.2;
-			};
-		};
-		9A987A112C73CAA1005CA465 /* XCRemoteSwiftPackageReference "Pow" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/EmergeTools/Pow";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.4;
 			};
 		};
 		B1628B902CC260C0003D8DF3 /* XCRemoteSwiftPackageReference "swiftui-introspect" */ = {

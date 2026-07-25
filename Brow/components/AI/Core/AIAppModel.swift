@@ -39,6 +39,11 @@ final class AIAppModel {
         for event in events {
             state.apply(event)
         }
+        // ponytail: trivial eviction so dismissedCompletions can't grow
+        // unbounded — drop entries for sessions the reducer no longer
+        // tracks. Upgrade to a size cap if sessionsByID itself ever grows
+        // unbounded (it doesn't today; see removeInvisibleSessions).
+        dismissedCompletions = dismissedCompletions.filter { state.sessionsByID[$0.key] != nil }
     }
 
     /// Updates the reducer only. Does NOT complete any bridge HTTP
