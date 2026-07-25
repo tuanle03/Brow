@@ -153,26 +153,42 @@ final class ClaudeCodeBridge: ObservableObject {
                 return .badRequest("Could not parse event JSON")
             }
             ingest(parsed)
+
+            // ADDITIVE mirror (Task 1.7): fold the same event into the new
+            // `AIAppModel`/`SessionState` reducer alongside the existing
+            // `ClaudeCodeStore` calls below. Pure state mirror only — no
+            // side effects, doesn't touch the store's approval queue or
+            // continuation registry. `handle` already runs on the main
+            // actor (see `receive`'s `Task { @MainActor in ... }`), so no
+            // extra hop is needed to reach `@MainActor AIAppModel`.
+            let mirroredEvents = ClaudeEventMapping.mapClaudeEvent(parsed, context: envelope.context)
+
             switch parsed.event {
             case .sessionStart(let payload):
                 ClaudeCodeStore.shared.recordSessionStart(payload)
+                AIAppModel.shared.ingest(mirroredEvents)
                 return .ok(jsonBody: "{}")
             case .sessionEnd(let payload):
                 ClaudeCodeStore.shared.recordSessionEnd(payload)
+                AIAppModel.shared.ingest(mirroredEvents)
                 return .ok(jsonBody: "{}")
             case .userPromptSubmit(let payload):
                 ClaudeCodeStore.shared.recordUserPrompt(payload)
+                AIAppModel.shared.ingest(mirroredEvents)
                 return .ok(jsonBody: "{}")
             case .permissionRequest(let payload):
                 // Suspends until the user decides in the notch, a saved
                 // rule matches, or the store's 55s timeout fires.
                 let body = await ClaudeCodeStore.shared.handlePermissionRequest(payload, rawJSON: parsed.rawJSON)
+                AIAppModel.shared.ingest(mirroredEvents)
                 return .ok(jsonBody: body)
             case .notification(let payload):
                 ClaudeCodeStore.shared.recordNotification(payload)
+                AIAppModel.shared.ingest(mirroredEvents)
                 return .ok(jsonBody: "{}")
             case .stop(let payload):
                 ClaudeCodeStore.shared.recordStop(payload)
+                AIAppModel.shared.ingest(mirroredEvents)
                 return .ok(jsonBody: "{}")
             case .unknown:
                 return .ok(jsonBody: "{}")

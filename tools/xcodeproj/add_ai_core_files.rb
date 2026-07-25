@@ -24,6 +24,7 @@ CORE_SOURCE_FILES = %w[
   AgentEvent.swift
   SessionState.swift
   ClaudeEventMapping.swift
+  AIAppModel.swift
 ].freeze
 TEST_FILES = %w[
   ValueTypeTests.swift
@@ -31,6 +32,7 @@ TEST_FILES = %w[
   AgentEventCodableTests.swift
   SessionStateTests.swift
   ClaudeEventMappingTests.swift
+  AIAppModelTests.swift
 ].freeze
 
 project = Xcodeproj::Project.open(PROJECT_PATH)

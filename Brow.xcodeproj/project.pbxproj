@@ -10,6 +10,7 @@
 		0496E4203268AA38C69B1CD0 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 415F1D144813DEC7A6BE0385 /* Cocoa.framework */; };
 		04FB41347F57F6D261C0A631 /* AgentEventCodableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5218CA43F77DDF91821CB7A3 /* AgentEventCodableTests.swift */; };
 		0713219788B17AE829117897 /* SessionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F75412792DF754B016B47AF /* SessionState.swift */; };
+		0BBA03047E555ED035E0BF05 /* AIAppModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45A4D7418C0592C20F47F5E /* AIAppModelTests.swift */; };
 		0F9CF2690ABD2B19E29CAC9F /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A9C523551D0F063FD2B902C /* main.swift */; };
 		1100290C2E847E2800035A57 /* NSItemProvider+LoadHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1100290B2E847E2800035A57 /* NSItemProvider+LoadHelpers.swift */; };
 		110029272E84FD4C00035A57 /* TemporaryFileStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 110029262E84FD4C00035A57 /* TemporaryFileStorageService.swift */; };
@@ -173,6 +174,7 @@
 		B1FEB4992C7686630066EBBC /* PanGesture.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1FEB4982C7686630066EBBC /* PanGesture.swift */; };
 		B759D8DC31930B76DD6A518B /* PermissionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADC61FA4E3EF8AFFE8A8B94C /* PermissionModels.swift */; };
 		BC4A2B9201868CCB1D8A652D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 415F1D144813DEC7A6BE0385 /* Cocoa.framework */; };
+		C3C8375FA2E5E3D5FA9E70FA /* AIAppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07C632841AE7D96F59C2CB1 /* AIAppModel.swift */; };
 		C7DDB52001DBCD22DBD6425F /* ClaudeCodeBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEE90A5FC095E57C34A393C5 /* ClaudeCodeBridge.swift */; };
 		CC73CFFA07C3F14EE8AB2414 /* AgentTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = F67FDF7FEB2234549801EED9 /* AgentTool.swift */; };
 		D26ACCCCB2D3A4BDDC700856 /* AISettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32BA6C5A41A6A419B7511B48 /* AISettingsView.swift */; };
@@ -408,6 +410,8 @@
 		B1FEB4982C7686630066EBBC /* PanGesture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanGesture.swift; sourceTree = "<group>"; };
 		BC917D774C09A3F9C7ADFF8E /* AgentSession.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AgentSession.swift; sourceTree = "<group>"; };
 		C1D9BDF4095C4633816021BD /* BrowAgentHook */ = {isa = PBXFileReference; includeInIndex = 0; path = BrowAgentHook; sourceTree = BUILT_PRODUCTS_DIR; };
+		D07C632841AE7D96F59C2CB1 /* AIAppModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AIAppModel.swift; sourceTree = "<group>"; };
+		D45A4D7418C0592C20F47F5E /* AIAppModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AIAppModelTests.swift; sourceTree = "<group>"; };
 		D794C4D274CC6937AEB77D3E /* AISessionsTabView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AISessionsTabView.swift; sourceTree = "<group>"; };
 		DEE90A5FC095E57C34A393C5 /* ClaudeCodeBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClaudeCodeBridge.swift; sourceTree = "<group>"; };
 		E1A4DA9D772F3F9C6716E531 /* BrowTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BrowTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -996,6 +1000,7 @@
 				07D3FE9F7444EF4D457F53B5 /* AgentEvent.swift */,
 				3F75412792DF754B016B47AF /* SessionState.swift */,
 				9BD9C34B5867B8BAB2685BCA /* ClaudeEventMapping.swift */,
+				D07C632841AE7D96F59C2CB1 /* AIAppModel.swift */,
 			);
 			name = Core;
 			path = Core;
@@ -1012,6 +1017,7 @@
 				5218CA43F77DDF91821CB7A3 /* AgentEventCodableTests.swift */,
 				FA8027DC9707258E183769CB /* SessionStateTests.swift */,
 				149BDA4E2F27F0BDE7DBF68C /* ClaudeEventMappingTests.swift */,
+				D45A4D7418C0592C20F47F5E /* AIAppModelTests.swift */,
 			);
 			name = BrowTests;
 			path = BrowTests;
@@ -1350,6 +1356,7 @@
 				27183DA8FC02DB2047F52729 /* AgentEvent.swift in Sources */,
 				0713219788B17AE829117897 /* SessionState.swift in Sources */,
 				3E3954F521A76388B727F45C /* ClaudeEventMapping.swift in Sources */,
+				C3C8375FA2E5E3D5FA9E70FA /* AIAppModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1375,6 +1382,7 @@
 				04FB41347F57F6D261C0A631 /* AgentEventCodableTests.swift in Sources */,
 				3D8A9039CB32677DB3CDB507 /* SessionStateTests.swift in Sources */,
 				FBEFE1DC634B1EC2DE98798B /* ClaudeEventMappingTests.swift in Sources */,
+				0BBA03047E555ED035E0BF05 /* AIAppModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
