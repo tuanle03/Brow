@@ -204,7 +204,16 @@ struct ContentView: View {
                                 handleDownGesture(translation: translation, phase: phase)
                             }
                     }
-                    .conditionalModifier(Defaults[.closeGestureEnabled] && Defaults[.enableGestures]) { view in
+                    // Close-on-swipe-up is a CLOSED-pill affordance only. macOS
+                    // delivers mouse-wheel and two-finger trackpad scrolls as
+                    // scrollWheel events, which `panGesture`'s ScrollMonitor
+                    // can't tell apart from a swipe — so while the panel is
+                    // OPEN, scrolling its (now scrollable) content would
+                    // accumulate an up-swipe and collapse the island. Gate the
+                    // up-monitor to the closed state so open-panel scrolls go to
+                    // the ScrollView only; the opened panel is dismissed by
+                    // click-outside / hover-away / auto-collapse instead.
+                    .conditionalModifier(Defaults[.closeGestureEnabled] && Defaults[.enableGestures] && vm.notchState == .closed) { view in
                         view
                             .panGesture(direction: .up) { translation, phase in
                                 handleUpGesture(translation: translation, phase: phase)
@@ -491,10 +500,25 @@ struct ContentView: View {
     }
 
     private func doOpen() {
+        // While any session needs the user (approval / question), EVERY
+        // reopen route — click, hover, gesture — must land on the AI surface
+        // so the actionable card is visible, mirroring the auto-expand path
+        // (`handleAIAutoExpansionChange`). Without this a manual reopen lands
+        // on the restored prior tab (home/shelf), where `IslandSurfaceView`
+        // isn't mounted, and the still-pending question/approval card looks
+        // like it vanished. The card state itself is never cleared on
+        // collapse — only answering or the 55s timeout resolves it.
+        if hasPendingAttention {
+            coordinator.currentView = .ai
+        }
         withAnimation(animationSpring) {
             vm.open()
         }
     }
+
+    /// True while any island-visible session requires the user's attention
+    /// (waiting for approval or an answer). Same filter as `v8AttentionCount`.
+    private var hasPendingAttention: Bool { v8AttentionCount > 0 }
 
     // MARK: - Rainbow halo
 
