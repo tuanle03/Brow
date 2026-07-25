@@ -95,6 +95,16 @@ enum ClaudeCodeHookInstaller {
         (realHomeDirectory as NSString).appendingPathComponent(".brow/hooks/brow-claude-hook")
     }
 
+    /// Legacy inline `curl` command Brow wrote before switching to the
+    /// managed `BrowAgentHook` binary. Fixed literal — never parameterized.
+    /// Kept only so `isOurCommand` still recognizes (and `install`/`uninstall`
+    /// still sweep away) the entry every pre-upgrade Brow install already has
+    /// in `~/.claude/settings.json`; without it, upgrading would append the
+    /// new binary command alongside the old curl command instead of
+    /// replacing it, double-firing every hook event.
+    static let legacyCurlCommand: String =
+        "curl --silent --max-time 60 -H 'Content-Type: application/json' --data-binary @- http://127.0.0.1:21064/event"
+
     static var claudeSettingsPath: String {
         (realHomeDirectory as NSString).appendingPathComponent(".claude/settings.json")
     }
@@ -224,10 +234,11 @@ enum ClaudeCodeHookInstaller {
         settings["hooks"] = hooks
     }
 
-    /// Identifies a hook entry as Brow's own — either the managed-binary
-    /// command, or the legacy on-disk script path written by older builds.
-    private static func isOurCommand(_ command: String) -> Bool {
-        command == currentHookCommand || command == hookScriptPath
+    /// Identifies a hook entry as Brow's own — the managed-binary command,
+    /// the legacy inline-curl command (pre-Task-0.4 installs), or the
+    /// legacy on-disk script path (pre-curl installs).
+    static func isOurCommand(_ command: String) -> Bool {
+        command == currentHookCommand || command == legacyCurlCommand || command == hookScriptPath
     }
 
     /// Removes only the hook entries whose nested `command` field matches
