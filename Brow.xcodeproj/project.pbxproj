@@ -113,10 +113,10 @@
 		5917FD112E57891600E87F1C /* MediaKeyInterceptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5917FD102E57891600E87F1C /* MediaKeyInterceptor.swift */; };
 		5955950D2E900ED800C66711 /* ApplicationRelauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5955950C2E900ED800C66711 /* ApplicationRelauncher.swift */; };
 		59D8C23C2E589FAA00147B33 /* VolumeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59D8C23B2E589FAA00147B33 /* VolumeManager.swift */; };
+		66C11BCF0645825D2D096FD8 /* ClaudeHookInstallCommandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 004FAC3CA8BC40DFE558E562 /* ClaudeHookInstallCommandTests.swift */; };
 		82FE10C99095F5125A724237 /* BridgePost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9095869BFD9037EBD7DD3731 /* BridgePost.swift */; };
 		912304BF14946BA9A0077BB8 /* ClaudeCodeEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76DF98C0B2319A5CE47187D3 /* ClaudeCodeEvent.swift */; };
 		97B7E74624020EF870B19C7E /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C10C94F5818DBB41856030C /* SmokeTests.swift */; };
-		D588407057AD4326B96880FF /* AgentBridgeEnvelopeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F93E46F9C2B4A1592780CBB /* AgentBridgeEnvelopeTests.swift */; };
 		9A0887322C7A693000C160EA /* TabButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0887312C7A693000C160EA /* TabButton.swift */; };
 		9A0887352C7AFF8E00C160EA /* TabSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0887342C7AFF8E00C160EA /* TabSelectionView.swift */; };
 		9A987A0D2C73CA66005CA465 /* ShelfView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A987A032C73CA66005CA465 /* ShelfView.swift */; };
@@ -165,6 +165,7 @@
 		D26ACCCCB2D3A4BDDC700856 /* AISettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32BA6C5A41A6A419B7511B48 /* AISettingsView.swift */; };
 		D35FE994D92D4D4E9E8A7880 /* ClaudeCodeHookInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9827C1AD5BA0F5A25573640C /* ClaudeCodeHookInstaller.swift */; };
 		D538121168B5C735A0DF143C /* BrowMascot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D14452ED0A9D6795FB34556 /* BrowMascot.swift */; };
+		D588407057AD4326B96880FF /* AgentBridgeEnvelopeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F93E46F9C2B4A1592780CBB /* AgentBridgeEnvelopeTests.swift */; };
 		E54AA27E1278F10C7AC82339 /* AISessionsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D794C4D274CC6937AEB77D3E /* AISessionsTabView.swift */; };
 		F2857591B33CD27086D05868 /* ClaudeCodeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5565EAB6E4A626F41BEC5B04 /* ClaudeCodeStore.swift */; };
 		F38DE6482D8243E7008B5C6D /* BatteryActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F38DE6472D8243E2008B5C6D /* BatteryActivityManager.swift */; };
@@ -232,6 +233,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		004FAC3CA8BC40DFE558E562 /* ClaudeHookInstallCommandTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClaudeHookInstallCommandTests.swift; sourceTree = "<group>"; };
 		1100290B2E847E2800035A57 /* NSItemProvider+LoadHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSItemProvider+LoadHelpers.swift"; sourceTree = "<group>"; };
 		110029262E84FD4C00035A57 /* TemporaryFileStorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemporaryFileStorageService.swift; sourceTree = "<group>"; };
 		110029292E8691B400035A57 /* FileShareView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileShareView.swift; sourceTree = "<group>"; };
@@ -331,13 +333,13 @@
 		415F1D144813DEC7A6BE0385 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		4A9C523551D0F063FD2B902C /* main.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		4C10C94F5818DBB41856030C /* SmokeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SmokeTests.swift; sourceTree = "<group>"; };
-		7F93E46F9C2B4A1592780CBB /* AgentBridgeEnvelopeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AgentBridgeEnvelopeTests.swift; sourceTree = "<group>"; };
 		507266DA2C908E2E00A2D00D /* HoverButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoverButton.swift; sourceTree = "<group>"; };
 		5565EAB6E4A626F41BEC5B04 /* ClaudeCodeStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClaudeCodeStore.swift; sourceTree = "<group>"; };
 		5917FD102E57891600E87F1C /* MediaKeyInterceptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaKeyInterceptor.swift; sourceTree = "<group>"; };
 		5955950C2E900ED800C66711 /* ApplicationRelauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationRelauncher.swift; sourceTree = "<group>"; };
 		59D8C23B2E589FAA00147B33 /* VolumeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeManager.swift; sourceTree = "<group>"; };
 		76DF98C0B2319A5CE47187D3 /* ClaudeCodeEvent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClaudeCodeEvent.swift; sourceTree = "<group>"; };
+		7F93E46F9C2B4A1592780CBB /* AgentBridgeEnvelopeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AgentBridgeEnvelopeTests.swift; sourceTree = "<group>"; };
 		8D14452ED0A9D6795FB34556 /* BrowMascot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BrowMascot.swift; sourceTree = "<group>"; };
 		9095869BFD9037EBD7DD3731 /* BridgePost.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BridgePost.swift; sourceTree = "<group>"; };
 		9827C1AD5BA0F5A25573640C /* ClaudeCodeHookInstaller.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClaudeCodeHookInstaller.swift; sourceTree = "<group>"; };
@@ -958,6 +960,7 @@
 			children = (
 				4C10C94F5818DBB41856030C /* SmokeTests.swift */,
 				7F93E46F9C2B4A1592780CBB /* AgentBridgeEnvelopeTests.swift */,
+				004FAC3CA8BC40DFE558E562 /* ClaudeHookInstallCommandTests.swift */,
 			);
 			name = BrowTests;
 			path = BrowTests;
@@ -1306,6 +1309,7 @@
 			files = (
 				97B7E74624020EF870B19C7E /* SmokeTests.swift in Sources */,
 				D588407057AD4326B96880FF /* AgentBridgeEnvelopeTests.swift in Sources */,
+				66C11BCF0645825D2D096FD8 /* ClaudeHookInstallCommandTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

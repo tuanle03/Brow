@@ -99,21 +99,28 @@ enum ClaudeCodeHookInstaller {
         (realHomeDirectory as NSString).appendingPathComponent(".claude/settings.json")
     }
 
-    /// Inline shell command Claude Code runs for each covered hook event.
-    /// Pipes the hook payload from stdin into the local bridge and prints
-    /// the response back to stdout. Embedding the command in settings.json
-    /// avoids the on-disk hook script entirely — macOS slaps
-    /// `com.apple.quarantine` on any file a sandboxed app writes outside
-    /// its container, and the sandbox does not let us strip it, so the
-    /// file would never be exec'able.
-    static let hookCommand: String =
-        "curl --silent --max-time 60 -H 'Content-Type: application/json' --data-binary @- http://127.0.0.1:21064/event"
+    /// Command Claude Code runs for each covered hook event: the managed
+    /// `BrowAgentHook` binary (Task 0.2), which reads the hook payload from
+    /// stdin, POSTs it to the local bridge, and prints the response back to
+    /// stdout. Pure and testable — no filesystem access.
+    static func hookCommand(binaryPath: String) -> String {
+        "'\(binaryPath)' --source claude"
+    }
+
+    /// The hook command currently referenced in settings.json, based on the
+    /// managed install path. Used for detection (`isOurCommand`) — doesn't
+    /// require the binary to actually be installed. Also shown verbatim in
+    /// the Settings → AI "Details" disclosure.
+    static var currentHookCommand: String {
+        hookCommand(binaryPath: ManagedHookBinary.installedURL.path)
+    }
 
     // MARK: - Public API
 
     static func install() throws {
+        let binaryPath = try ManagedHookBinary.ensureInstalled().path
         try mutateSettings { settings in
-            attachOurHook(to: &settings)
+            attachOurHook(to: &settings, binaryPath: binaryPath)
         }
         removeLegacyHookScript()
     }
@@ -196,7 +203,7 @@ enum ClaudeCodeHookInstaller {
     /// the same hook key are preserved. Also sweeps legacy hook keys (e.g.
     /// the old PreToolUse entry) so we never leave a stale Brow reference
     /// behind after a hook-event migration.
-    private static func attachOurHook(to settings: inout Settings) {
+    private static func attachOurHook(to settings: inout Settings, binaryPath: String) {
         var hooks = (settings["hooks"] as? Settings) ?? [:]
 
         // 1. Strip any existing Brow reference, anywhere in the hooks dict.
@@ -209,7 +216,7 @@ enum ClaudeCodeHookInstaller {
                 "matcher": "*",
                 "hooks": [[
                     "type": "command",
-                    "command": hookCommand
+                    "command": hookCommand(binaryPath: binaryPath)
                 ]]
             ] as [String: Any])
             hooks[hookName] = bucket
@@ -217,10 +224,10 @@ enum ClaudeCodeHookInstaller {
         settings["hooks"] = hooks
     }
 
-    /// Identifies a hook entry as Brow's own — either the new inline curl
+    /// Identifies a hook entry as Brow's own — either the managed-binary
     /// command, or the legacy on-disk script path written by older builds.
     private static func isOurCommand(_ command: String) -> Bool {
-        command == hookCommand || command == hookScriptPath
+        command == currentHookCommand || command == hookScriptPath
     }
 
     /// Removes only the hook entries whose nested `command` field matches
@@ -288,5 +295,53 @@ enum ClaudeCodeHookInstaller {
             }
         }
         return siblings.sorted()
+    }
+}
+
+/// Manages the on-disk copy of the `BrowAgentHook` CLI binary embedded in
+/// the app (Task 0.2, `Contents/Helpers/BrowAgentHook`). Claude Code execs
+/// hook commands from *outside* the app sandbox, so the binary must live at
+/// a stable, real-home path rather than inside `Brow.app` — the app bundle
+/// can move or be re-signed between launches, and a path inside it would
+/// break the hook until the next `install()`.
+enum ManagedHookBinary {
+    enum InstallError: LocalizedError {
+        case bundledBinaryMissing
+
+        var errorDescription: String? {
+            "BrowAgentHook is missing from the app bundle."
+        }
+    }
+
+    static var installedURL: URL {
+        URL(fileURLWithPath: ClaudeCodeHookInstaller.realHomeDirectory)
+            .appendingPathComponent("Library/Application Support/Brow/bin/BrowAgentHook")
+    }
+
+    static var bundledURL: URL? {
+        Bundle.main.url(forResource: "BrowAgentHook", withExtension: nil, subdirectory: "Helpers")
+            ?? Bundle.main.executableURL?.deletingLastPathComponent()
+                .appendingPathComponent("../Helpers/BrowAgentHook").standardizedFileURL
+    }
+
+    /// Copies the bundled binary to the managed path if missing or changed,
+    /// then makes sure it's executable. Returns the managed path.
+    @discardableResult
+    static func ensureInstalled() throws -> URL {
+        guard let bundled = bundledURL, FileManager.default.fileExists(atPath: bundled.path) else {
+            throw InstallError.bundledBinaryMissing
+        }
+        let installed = installedURL
+        let fm = FileManager.default
+        try fm.createDirectory(at: installed.deletingLastPathComponent(), withIntermediateDirectories: true)
+
+        let upToDate = fm.fileExists(atPath: installed.path)
+            && (try? Data(contentsOf: bundled)) == (try? Data(contentsOf: installed))
+        if !upToDate {
+            try? fm.removeItem(at: installed)
+            try fm.copyItem(at: bundled, to: installed)
+        }
+        try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: installed.path)
+        return installed
     }
 }
