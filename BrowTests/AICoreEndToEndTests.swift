@@ -3,11 +3,15 @@ import XCTest
 
 /// End-to-end proof that mapping + reducer + model compose correctly: a
 /// realistic sequence of decoded Claude Code hook payloads is driven through
-/// `ClaudeEventMapping.mapClaudeEvent` → `AIAppModel.ingest`/`approve`,
-/// asserting the full session lifecycle a real bridge run would produce
-/// (Task 1.8). Complements `ClaudeEventMappingTests` (mapping only) and
-/// `AIAppModelTests` (model only, hand-built `AgentEvent`s) — this is the
-/// only place all three layers are driven together, JSON in.
+/// `ClaudeEventMapping.mapClaudeEvent` → `AIAppModel.ingest`, including the
+/// `.actionableStateResolved` event `ClaudeCodeBridge`'s `.permissionRequest`
+/// case ingests after its blocking store `await` returns — asserting the
+/// full session lifecycle a real bridge run would produce (Task 1.8).
+/// Complements `ClaudeEventMappingTests` (mapping only) and `AIAppModelTests`
+/// (model only, hand-built `AgentEvent`s, exercises `approve`/`resolvePermission`
+/// — a different reducer path from the one the bridge actually drives) —
+/// this is the only place all three layers, on the bridge's real path, are
+/// driven together, JSON in.
 @MainActor
 final class AICoreEndToEndTests: XCTestCase {
     private static let sessionID = "sess-e2e-1"
@@ -72,10 +76,23 @@ final class AICoreEndToEndTests: XCTestCase {
         let request = model.state.sessionsByID[Self.sessionID]?.permissionRequest
         XCTAssertEqual(request?.toolName, "Bash")
 
-        // 3. approve(...) -> request cleared, back to running. Mirrors what
-        //    the bridge's post-`await` `.actionableStateResolved` ingest (or,
-        //    for the notch's own approve action, `AIAppModel.approve`) does.
-        model.approve(sessionID: Self.sessionID, .allowOnce())
+        // 3. Resolution -> request cleared, back to running. This ingests
+        //    the exact same event `ClaudeCodeBridge`'s post-`await` code
+        //    constructs (ClaudeCodeBridge.swift:203-209) — not
+        //    `AIAppModel.approve`/`SessionState.resolvePermission`, which is
+        //    a different reducer path (used by the notch's own approve
+        //    action, not by the bridge). `Date()` here is guaranteed >= the
+        //    PermissionRequest event's timestamp (also `Date()`, captured
+        //    earlier in step 2) since real time only moves forward, so it
+        //    clears `SessionState.apply`'s `.actionableStateResolved`
+        //    monotonicity guard the same way the bridge's real call does.
+        model.ingest([
+            .actionableStateResolved(ActionableStateResolved(
+                sessionID: Self.sessionID,
+                summary: "Permission resolved.",
+                timestamp: Date()
+            ))
+        ])
         XCTAssertNil(model.state.sessionsByID[Self.sessionID]?.permissionRequest)
         XCTAssertEqual(model.state.sessionsByID[Self.sessionID]?.phase, .running)
 
