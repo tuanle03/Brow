@@ -109,6 +109,13 @@ class BrowSkyLightWindow: NSPanel {
     
     private var observers: Set<AnyCancellable> = []
     
-    override var canBecomeKey: Bool { false }
+    // `.nonactivatingPanel` (set in the styleMask at creation, see
+    // `BrowApp.createBrowNotchWindow`) lets a panel become key WITHOUT
+    // activating Brow or deactivating whatever app is currently frontmost —
+    // that's the whole point of the style. So `canBecomeKey` can safely be
+    // `true`: SwiftUI controls (TextField, etc.) need a key window to
+    // receive keyboard events at all. `canBecomeMain` stays `false` — the
+    // notch should never become the app's main window.
+    override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 }

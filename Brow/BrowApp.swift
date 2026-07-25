@@ -243,7 +243,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             window.disableSkyLight()
         }
 
-        window.contentView = NSHostingView(
+        window.contentView = NotchHostingView(
             rootView: ContentView()
                 .environmentObject(viewModel)
         )

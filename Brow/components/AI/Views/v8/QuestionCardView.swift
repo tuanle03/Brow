@@ -59,10 +59,15 @@ struct QuestionCardView: View {
                     .foregroundStyle(V6Palette.paper.opacity(0.5))
             }
 
-            Text(question.question)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(V6Palette.paper.opacity(0.88))
-                .fixedSize(horizontal: false, vertical: true)
+            // The card title above already shows this text in the common
+            // single-question case where `prompt.title == question.question`
+            // — don't repeat it as a second, redundant label.
+            if !isRedundantWithTitle(question) {
+                Text(question.question)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(V6Palette.paper.opacity(0.88))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(question.options) { option in
@@ -70,6 +75,12 @@ struct QuestionCardView: View {
                 }
             }
         }
+    }
+
+    /// True when this is the only question and its text matches the card's
+    /// title, so the title above already conveys it.
+    private func isRedundantWithTitle(_ question: QuestionPromptItem) -> Bool {
+        questions.count == 1 && prompt?.title == question.question
     }
 
     // MARK: - Option row
