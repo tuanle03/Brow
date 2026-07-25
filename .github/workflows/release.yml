@@ -81,23 +81,12 @@ jobs:
       - name: Export .app
         run: |
           set -euo pipefail
-          mkdir -p build
-          cat > build/export_options.plist <<'PLIST'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>method</key>
-              <string>mac-application</string>
-              <key>signingStyle</key>
-              <string>automatic</string>
-          </dict>
-          </plist>
-          PLIST
-          xcodebuild -exportArchive \
-            -archivePath build/Brow.xcarchive \
-            -exportPath build/Release \
-            -exportOptionsPlist build/export_options.plist
+          # The archive is already ad-hoc signed (CODE_SIGN_IDENTITY=-), so
+          # `xcodebuild -exportArchive` adds nothing but breakage: Xcode 16.x
+          # dropped the `mac-application` export method and now rejects the
+          # options plist. Copy the built .app straight out of the archive.
+          mkdir -p build/Release
+          cp -R build/Brow.xcarchive/Products/Applications/Brow.app build/Release/Brow.app
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v6
