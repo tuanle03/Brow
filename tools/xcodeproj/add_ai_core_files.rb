@@ -21,10 +21,12 @@ CORE_SOURCE_FILES = %w[
   PermissionModels.swift
   QuestionModels.swift
   AgentSession.swift
+  AgentEvent.swift
 ].freeze
 TEST_FILES = %w[
   ValueTypeTests.swift
   AgentSessionVisibilityTests.swift
+  AgentEventCodableTests.swift
 ].freeze
 
 project = Xcodeproj::Project.open(PROJECT_PATH)
