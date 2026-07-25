@@ -6,19 +6,19 @@
         <description>Automatic updates for Brow — a personal GPL v3 fork of boring.notch.</description>
         <language>en</language>
         <item>
-            <title>Brow 1.3.1</title>
-            <pubDate>Fri, 29 May 2026 10:01:31 +0000</pubDate>
-            <link>https://github.com/tuanle03/Brow/releases/tag/v1.3.1</link>
-            <sparkle:version>2605290956</sparkle:version>
-            <sparkle:shortVersionString>1.3.1</sparkle:shortVersionString>
+            <title>Brow 2.8.0</title>
+            <pubDate>Sat, 25 Jul 2026 21:23:08 +0000</pubDate>
+            <link>https://github.com/tuanle03/Brow/releases/tag/v2.8.0</link>
+            <sparkle:version>2607252120</sparkle:version>
+            <sparkle:shortVersionString>2.8.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <description><![CDATA[
-                <p>Automated release. See the <a href="https://github.com/tuanle03/Brow/releases/tag/v1.3.1">GitHub release notes</a> for details.</p>
+                <p>Automated release. See the <a href="https://github.com/tuanle03/Brow/releases/tag/v2.8.0">GitHub release notes</a> for details.</p>
             ]]></description>
             <enclosure
-                url="https://github.com/tuanle03/Brow/releases/download/v1.3.1/Brow-1.3.1.dmg"
-                sparkle:edSignature="Cb5SY/Woga+OFXZXMVFkX5DY8Yf8YdvPq7d9d1Ax34HuzOishfXWI8ZnZ9dm9oy1A1tC7/f+Elt6leij6pc6Aw=="
-                length="11688697"
+                url="https://github.com/tuanle03/Brow/releases/download/v2.8.0/Brow-2.8.0.dmg"
+                sparkle:edSignature="e8AjJJ5Q7IoZ74XKgnVNpr0ixU2tAAgg5zRKiNKp6stWkHEKYUGHdrLX1Ixm95rV1yW3VVhfIks6cjwLicVJAA=="
+                length="11990124"
                 type="application/octet-stream"
             />
         </item>
