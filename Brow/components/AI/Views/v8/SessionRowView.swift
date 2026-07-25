@@ -102,20 +102,26 @@ struct SessionRowView: View {
 
     @ViewBuilder
     private var detail: some View {
-        Text(detailText)
-            .font(.system(size: 11))
-            .foregroundStyle(V6Palette.paper.opacity(0.7))
-            .fixedSize(horizontal: false, vertical: true)
+        if let detailText {
+            Text(detailText)
+                .font(.system(size: 11))
+                .foregroundStyle(V6Palette.paper.opacity(0.7))
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
-    private var detailText: String {
+    /// Extra context revealed on expand. Only the request/question detail —
+    /// falling back to `session.summary` here just reprinted the summary line
+    /// already shown collapsed (the "Permission resolved." double), so return
+    /// nil in that case and render nothing.
+    private var detailText: String? {
         if let request = session.permissionRequest {
             return request.summary
         }
         if let prompt = session.questionPrompt {
             return prompt.title
         }
-        return session.summary
+        return nil
     }
 }
 

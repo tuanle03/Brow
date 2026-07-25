@@ -172,7 +172,12 @@ struct QuestionCardView: View {
             answers[question.question] = values.joined(separator: ", ")
         }
 
+        // Mirror first (moves the session out of `.waitingForAnswer` so the
+        // bridge's post-resolution `actionableStateResolved` no-ops), then
+        // resolve the live hook continuation with an `allow` carrying the
+        // answers as `updatedInput` — the same dual-wire as ApprovalCardView.
         model.answer(sessionID: session.id, answers: answers)
+        ClaudeCodeStore.shared.answerQuestion(sessionID: session.id, answers: answers)
     }
 }
 
