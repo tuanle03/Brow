@@ -20,6 +20,10 @@ final class ClaudeCodeBridge: ObservableObject {
     @Published private(set) var lastError: String?
     @Published private(set) var lastEvent: ClaudeCodeIncomingEvent?
     @Published private(set) var totalEventsSeen: Int = 0
+    /// Runtime context (terminal app, tty, cwd) from the most recently
+    /// ingested envelope. Later tasks use this to enrich events; storing it
+    /// here keeps this task's scope to parsing + routing only.
+    private(set) var lastContext: AgentBridgeEnvelope.HookRuntimeContextDTO?
 
     private var listener: NWListener?
     private var connections: [NWConnection] = []
@@ -131,7 +135,21 @@ final class ClaudeCodeBridge: ObservableObject {
     private func handle(request: HTTPRequest) async -> HTTPResponse {
         switch (request.method, request.path) {
         case ("POST", "/event"):
-            guard let parsed = ClaudeCodeIncomingEvent.decode(from: request.body) else {
+            guard let envelope = try? AgentBridgeEnvelope.decode(request.body) else {
+                return .badRequest("Could not parse event JSON")
+            }
+            lastContext = envelope.context
+
+            switch envelope.source {
+            case "claude":
+                break
+            default:
+                NSLog("ClaudeCodeBridge: unhandled source: \(envelope.source)")
+                return .ok(jsonBody: "{}")
+            }
+
+            guard let payloadData = try? JSONSerialization.data(withJSONObject: envelope.payloadJSON),
+                  let parsed = ClaudeCodeIncomingEvent.decode(from: payloadData) else {
                 return .badRequest("Could not parse event JSON")
             }
             ingest(parsed)
@@ -169,6 +187,33 @@ final class ClaudeCodeBridge: ObservableObject {
     private func ingest(_ event: ClaudeCodeIncomingEvent) {
         lastEvent = event
         totalEventsSeen += 1
+    }
+}
+
+// MARK: - Agent bridge envelope
+
+/// The enriched envelope `BrowAgentHook` POSTs: `{"source","payload","context"}`.
+/// Back-compat: a raw Claude hook payload with no top-level `"source"` key
+/// (the shape the legacy inline-curl hook still sends) is treated as
+/// `source == "claude"` with the whole object as the payload.
+struct AgentBridgeEnvelope {
+    let source: String
+    let payloadJSON: [String: Any]
+    let context: HookRuntimeContextDTO?
+
+    struct HookRuntimeContextDTO: Decodable { var terminalApp: String?; var tty: String?; var terminalSessionID: String?; var cwd: String? }
+
+    static func decode(_ data: Data) throws -> AgentBridgeEnvelope {
+        guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw NSError(domain: "AgentBridge", code: 1)
+        }
+        if let source = obj["source"] as? String, let payload = obj["payload"] as? [String: Any] {
+            let ctx = (obj["context"] as? [String: Any]).flatMap {
+                try? JSONDecoder().decode(HookRuntimeContextDTO.self, from: JSONSerialization.data(withJSONObject: $0))
+            }
+            return AgentBridgeEnvelope(source: source, payloadJSON: payload, context: ctx)
+        }
+        return AgentBridgeEnvelope(source: "claude", payloadJSON: obj, context: nil)
     }
 }
 
