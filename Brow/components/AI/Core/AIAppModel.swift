@@ -42,4 +42,16 @@ final class AIAppModel {
     func answer(sessionID: String, answers: [String: String]) {
         state.answerQuestion(sessionID: sessionID, answers: answers, at: Date())
     }
+
+    /// Task 2.2: the closed-pill glyph's mode, aggregated over sessions
+    /// visible in the island (`AgentSession.isVisibleInIsland`). Pure —
+    /// reads only `state`. Precedence: a session needing approval/answer
+    /// always wins (`.waiting`); otherwise any actively running session
+    /// wins (`.running`); otherwise `.idle`.
+    var islandClosedMode: UnifiedBarsGlyph.Mode {
+        let visible = state.sessionsByID.values.filter(\.isVisibleInIsland)
+        if visible.contains(where: { $0.phase.requiresAttention }) { return .waiting }
+        if visible.contains(where: { $0.phase == .running }) { return .running }
+        return .idle
+    }
 }
