@@ -3,11 +3,16 @@
 //  Brow
 //
 //  Task 2.4: renders whichever content `AIAppModel.closedPillContent(...)`
-//  resolved as the winner, inside Brow's own closed-notch pill shape
-//  (`NotchShape` + `cornerRadiusInsets.closed`, filled `V6Palette.ink`).
-//  Purely a rendering layer — precedence lives in
+//  resolved as the winner. Purely a rendering layer — precedence lives in
 //  `AIAppModel.closedPillContent`, this view only switches on the
 //  already-resolved `ClosedPillContent`.
+//
+//  Draws no background/shape of its own — `ContentView`'s outer
+//  `.background(V6Palette.ink).clipShape(currentNotchShape)` is the single
+//  fill+shape for the whole island (closed pill and open panel alike). A
+//  second nested `NotchShape` fill here would drift out of sync with the
+//  outer one (different padding) and show up as a black band around this
+//  pill instead of one seamless shape.
 //
 //  NOT wired into `ContentView` yet (Task 2.7 mounts it into the real
 //  closed-notch strip and passes the live `vm.closedNotchSize`) — the
@@ -48,17 +53,9 @@ struct V8ClosedPill: View {
     var size: CGSize = CGSize(width: 150, height: 32)
 
     var body: some View {
-        ZStack {
-            NotchShape(
-                topCornerRadius: cornerRadiusInsets.closed.top,
-                bottomCornerRadius: cornerRadiusInsets.closed.bottom
-            )
-            .fill(V6Palette.ink)
-
-            inner
-                .padding(.horizontal, 10)
-        }
-        .frame(width: size.width, height: size.height)
+        inner
+            .padding(.horizontal, 10)
+            .frame(width: size.width, height: size.height)
     }
 
     @ViewBuilder

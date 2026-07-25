@@ -9,15 +9,19 @@
 //  `actionableSessionID`. `.closed` renders nothing here — the closed pill
 //  is `V8ClosedPill` (Task 2.4), mounted separately.
 //
-//  Reuses Brow's `NotchShape` (opened corner radii) as the container so the
-//  shell shape matches the rest of the notch UI; surface transitions
-//  animate with the reference's open/close springs — a snappy spring when
-//  opening into a card/list, a smooth ease when collapsing back to
-//  `.closed`.
+//  Surface transitions animate with the reference's open/close springs — a
+//  snappy spring when opening into a card/list, a smooth ease when
+//  collapsing back to `.closed`.
 //
-//  NOT wired into `ContentView` yet (Task 2.7's job) — this is a
-//  standalone, previewable component, driven here by a plain `surface`
-//  property rather than reading `ContentViewModel`.
+//  Draws no background/shape of its own — mirrors the pre-v8 `AIPanel`
+//  (see `git show 78cbf6f~1:Brow/components/AI/Views/AIPanel.swift`), which
+//  filled the space it was given and let the surrounding `NotchLayout`
+//  container own the shape and fill. `ContentView`'s outer
+//  `.background(V6Palette.ink).clipShape(currentNotchShape)` is that single
+//  fill+shape for the whole island; a second nested `NotchShape` fill here,
+//  sized only to this view's own intrinsic content, drifts out of sync with
+//  the outer one and shows up as a mismatched inset panel with clipped
+//  content.
 //
 
 import SwiftUI
@@ -68,19 +72,12 @@ struct IslandSurfaceView: View {
     @ViewBuilder
     private func shell<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         content()
-            .background(
-                NotchShape(
-                    topCornerRadius: cornerRadiusInsets.opened.top,
-                    bottomCornerRadius: cornerRadiusInsets.opened.bottom
-                )
-                .fill(V6Palette.ink)
-            )
-            .clipShape(
-                NotchShape(
-                    topCornerRadius: cornerRadiusInsets.opened.top,
-                    bottomCornerRadius: cornerRadiusInsets.opened.bottom
-                )
-            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // Hard-clip so a tall preview never pushes content past the
+            // notch shape at the top of the open notch container — same
+            // safety belt the pre-v8 `AIPanel` used. The actual shape clip
+            // is `ContentView`'s outer `.clipShape(currentNotchShape)`.
+            .clipped()
     }
 }
 

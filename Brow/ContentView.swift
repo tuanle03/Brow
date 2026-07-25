@@ -118,7 +118,14 @@ struct ContentView: View {
                         : cornerRadiusInsets.closed.bottom
                     )
                     .padding([.horizontal, .bottom], vm.notchState == .open ? 12 : 0)
-                    .background(.black)
+                    // Single fill for the whole island (closed pill + open
+                    // panel): `V6Palette.ink`, painted once here and clipped
+                    // to `currentNotchShape`. v8 content views (`V8ClosedPill`,
+                    // `IslandSurfaceView`) must NOT paint their own
+                    // background/shape — a second nested fill drifts out of
+                    // sync with this one (different padding/size) and shows
+                    // up as a mismatched black frame around an inset panel.
+                    .background(V6Palette.ink)
                     .clipShape(currentNotchShape)
                     .overlay {
                         // Animated rainbow halo — only while Claude Code
