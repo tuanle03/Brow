@@ -125,10 +125,12 @@
 		5917FD112E57891600E87F1C /* MediaKeyInterceptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5917FD102E57891600E87F1C /* MediaKeyInterceptor.swift */; };
 		5955950D2E900ED800C66711 /* ApplicationRelauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5955950C2E900ED800C66711 /* ApplicationRelauncher.swift */; };
 		59D8C23C2E589FAA00147B33 /* VolumeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59D8C23B2E589FAA00147B33 /* VolumeManager.swift */; };
+		5AE3421B498A9AF194AB0A6D /* V8ClosedPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88EDB619E726874BCC1A7DD7 /* V8ClosedPill.swift */; };
 		60097589D94E51A6C3D7D3B4 /* AgentSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC917D774C09A3F9C7ADFF8E /* AgentSession.swift */; };
 		66C11BCF0645825D2D096FD8 /* ClaudeHookInstallCommandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 004FAC3CA8BC40DFE558E562 /* ClaudeHookInstallCommandTests.swift */; };
 		6DC039AFAB8993959210838E /* UnifiedBarsModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7924153A55D364123AC94DB2 /* UnifiedBarsModeTests.swift */; };
 		6E445112B4B8E749A14AC1D6 /* IslandSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = D051FC8204C6034F55F51056 /* IslandSurface.swift */; };
+		7DB37266A6CFAE2864764A82 /* ClosedPillPrecedenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57FC792433661679886F99B5 /* ClosedPillPrecedenceTests.swift */; };
 		82FE10C99095F5125A724237 /* BridgePost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9095869BFD9037EBD7DD3731 /* BridgePost.swift */; };
 		912304BF14946BA9A0077BB8 /* ClaudeCodeEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76DF98C0B2319A5CE47187D3 /* ClaudeCodeEvent.swift */; };
 		965169817E299AC0A9338B9E /* AgentSessionVisibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 838C950EBF1222069EA903E6 /* AgentSessionVisibilityTests.swift */; };
@@ -366,6 +368,7 @@
 		507266DA2C908E2E00A2D00D /* HoverButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoverButton.swift; sourceTree = "<group>"; };
 		5218CA43F77DDF91821CB7A3 /* AgentEventCodableTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AgentEventCodableTests.swift; sourceTree = "<group>"; };
 		5565EAB6E4A626F41BEC5B04 /* ClaudeCodeStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClaudeCodeStore.swift; sourceTree = "<group>"; };
+		57FC792433661679886F99B5 /* ClosedPillPrecedenceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClosedPillPrecedenceTests.swift; sourceTree = "<group>"; };
 		5811E243ED2CE83195F1B420 /* AICoreEndToEndTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AICoreEndToEndTests.swift; sourceTree = "<group>"; };
 		5917FD102E57891600E87F1C /* MediaKeyInterceptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaKeyInterceptor.swift; sourceTree = "<group>"; };
 		5955950C2E900ED800C66711 /* ApplicationRelauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationRelauncher.swift; sourceTree = "<group>"; };
@@ -375,6 +378,7 @@
 		7924153A55D364123AC94DB2 /* UnifiedBarsModeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UnifiedBarsModeTests.swift; sourceTree = "<group>"; };
 		7F93E46F9C2B4A1592780CBB /* AgentBridgeEnvelopeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AgentBridgeEnvelopeTests.swift; sourceTree = "<group>"; };
 		838C950EBF1222069EA903E6 /* AgentSessionVisibilityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AgentSessionVisibilityTests.swift; sourceTree = "<group>"; };
+		88EDB619E726874BCC1A7DD7 /* V8ClosedPill.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = V8ClosedPill.swift; sourceTree = "<group>"; };
 		8A5B45F1E875EB5137367D22 /* IslandDesignPaletteTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IslandDesignPaletteTests.swift; sourceTree = "<group>"; };
 		8D14452ED0A9D6795FB34556 /* BrowMascot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BrowMascot.swift; sourceTree = "<group>"; };
 		8D20E6617C8AE31209FE902C /* SessionPhase.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SessionPhase.swift; sourceTree = "<group>"; };
@@ -1009,6 +1013,7 @@
 				1900068085576BFABF955900 /* IslandDesignPalette.swift */,
 				0D911F5475B0F91CCE3E3A23 /* UnifiedBarsGlyph.swift */,
 				D051FC8204C6034F55F51056 /* IslandSurface.swift */,
+				88EDB619E726874BCC1A7DD7 /* V8ClosedPill.swift */,
 			);
 			name = v8;
 			path = v8;
@@ -1048,6 +1053,7 @@
 				8A5B45F1E875EB5137367D22 /* IslandDesignPaletteTests.swift */,
 				7924153A55D364123AC94DB2 /* UnifiedBarsModeTests.swift */,
 				04799BFEABE5EAC7F5F0771B /* IslandSurfaceMappingTests.swift */,
+				57FC792433661679886F99B5 /* ClosedPillPrecedenceTests.swift */,
 			);
 			name = BrowTests;
 			path = BrowTests;
@@ -1390,6 +1396,7 @@
 				1328FF3A9F0E887AD8F6D480 /* IslandDesignPalette.swift in Sources */,
 				546A247B75BB120409DF2DE9 /* UnifiedBarsGlyph.swift in Sources */,
 				6E445112B4B8E749A14AC1D6 /* IslandSurface.swift in Sources */,
+				5AE3421B498A9AF194AB0A6D /* V8ClosedPill.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1420,6 +1427,7 @@
 				11611C2325D02ED19D4AB361 /* IslandDesignPaletteTests.swift in Sources */,
 				6DC039AFAB8993959210838E /* UnifiedBarsModeTests.swift in Sources */,
 				A0164AAAD5B885483F57B771 /* IslandSurfaceMappingTests.swift in Sources */,
+				7DB37266A6CFAE2864764A82 /* ClosedPillPrecedenceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

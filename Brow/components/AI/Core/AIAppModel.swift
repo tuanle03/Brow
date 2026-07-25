@@ -1,6 +1,18 @@
 import Foundation
 import Observation
 
+/// Task 2.4: what the single closed-pill slot shows when AI, Music, and
+/// Mascot all want it. `sessionID` (not the whole `AgentSession`) keeps
+/// this `Equatable` trivially — callers look the session back up in
+/// `AIAppModel.state.sessionsByID` to render it.
+enum ClosedPillContent: Equatable {
+    case aiAttention(sessionID: String)
+    case aiRunning
+    case music
+    case mascot
+    case empty
+}
+
 /// The `@Observable` owner of the ported `SessionState` reducer.
 ///
 /// ADDITIVE, non-destructive by design (Task 1.7): this runs as a pure state
@@ -53,5 +65,36 @@ final class AIAppModel {
         if visible.contains(where: { $0.phase.requiresAttention }) { return .waiting }
         if visible.contains(where: { $0.phase == .running }) { return .running }
         return .idle
+    }
+
+    /// Pure precedence resolver for the closed pill (Task 2.4). Takes
+    /// music/mascot availability as parameters instead of reading
+    /// `MusicManager`/`Defaults` directly, so this stays unit-testable
+    /// without AppKit or user defaults.
+    ///
+    /// Precedence, highest first:
+    /// 1. Any visible session (`isVisibleInIsland`) whose phase
+    ///    `requiresAttention` → `.aiAttention`. Always wins, even over a
+    ///    currently-playing song — a permission/question prompt must never
+    ///    hide behind the music visualizer. Tiebreak when more than one
+    ///    session needs attention: the most recently updated one
+    ///    (`updatedAt` desc) — the thing that just fired.
+    /// 2. Else, any visible session actively `.running` (mirrors
+    ///    `islandClosedMode == .running`) → `.aiRunning`.
+    /// 3. Else, `musicPlaying` → `.music`.
+    /// 4. Else, `mascotEnabled` → `.mascot`.
+    /// 5. Else → `.empty`.
+    func closedPillContent(musicPlaying: Bool, mascotEnabled: Bool) -> ClosedPillContent {
+        let visible = state.sessionsByID.values.filter(\.isVisibleInIsland)
+
+        if let mostRecent = visible
+            .filter(\.phase.requiresAttention)
+            .max(by: { $0.updatedAt < $1.updatedAt }) {
+            return .aiAttention(sessionID: mostRecent.id)
+        }
+        if islandClosedMode == .running { return .aiRunning }
+        if musicPlaying { return .music }
+        if mascotEnabled { return .mascot }
+        return .empty
     }
 }
