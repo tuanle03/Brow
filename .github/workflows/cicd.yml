@@ -28,7 +28,9 @@ jobs:
           - ^16
         scheme:
           - Brow
-    runs-on: macos-latest
+    # Pin to macos-15: macos-latest has moved past Xcode 16, which the
+    # `xcode: ^16` selector below (and the release build) still require.
+    runs-on: macos-15
     steps:
     - name: Code Checkout
       # TODO: pin to immutable SHA
