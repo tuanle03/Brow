@@ -97,4 +97,209 @@ final class AIAppModel {
         if mascotEnabled { return .mascot }
         return .empty
     }
+
+    // MARK: - Task 2.5: session list ranking / grouping / staleness
+
+    /// Reference's `islandActivityThreshold` — how recently a session must
+    /// have updated to still count as "active" for scoring purposes, even
+    /// past the running/attention phases.
+    private static let islandActivityThreshold: TimeInterval = 20 * 60
+
+    /// Reference's `completedStaleThreshold` (a user preference there; a
+    /// fixed constant here — Brow has no appearance-preferences surface for
+    /// it yet). Matches `AgentSession.isStaleCompleted`'s own default.
+    private static let completedStaleThreshold: TimeInterval = AgentSession.staleCompletedThreshold
+
+    /// Ranking score for the session list — ported verbatim (same weights)
+    /// from the reference's `AppModel.displayPriority(for:now:)`. Higher
+    /// sorts first. Pure: every time-dependent branch reads `now`, never
+    /// `Date()`.
+    ///
+    /// Dropped vs. the reference: `isSubagentSession` (no subagent concept
+    /// in Brow's trimmed `ClaudeSessionMetadata`) and the `monitoring.
+    /// liveAttachmentKey` live-attachment dedup (no such registry in Brow) —
+    /// neither factors into the score itself, both only filtered the
+    /// reference's primary/overflow bucket split, which Brow doesn't have.
+    func displayPriority(for session: AgentSession, now: Date) -> Int {
+        var score = 0
+
+        // Reference's `islandPresence(at:)` collapsed to the one thing
+        // `displayPriority` actually branches on: is this session "active"
+        // (running, needs attention, or updated within the activity
+        // window) vs. merely alive-but-idle.
+        let isActivePresence = session.phase == .running
+            || session.phase.requiresAttention
+            || now.timeIntervalSince(session.updatedAt) <= Self.islandActivityThreshold
+
+        if session.isProcessAlive {
+            score += isActivePresence ? 12_000 : 3_000
+        } else if session.origin == .demo || session.phase.requiresAttention {
+            score += 6_000
+        }
+
+        if session.phase.requiresAttention {
+            score += 10_000
+        }
+
+        if session.currentToolName?.isEmpty == false {
+            score += 6_000
+        }
+
+        if session.jumpTarget != nil {
+            score += 4_000
+        }
+
+        switch session.phase {
+        case .running:
+            score += 2_000
+        case .waitingForApproval:
+            score += 1_500
+        case .waitingForAnswer:
+            score += 1_200
+        case .completed:
+            score += 600
+        }
+
+        if session.isStaleCompleted(now: now, threshold: Self.completedStaleThreshold) {
+            score -= 900
+        }
+
+        let age = now.timeIntervalSince(session.updatedAt)
+        switch age {
+        case ..<120:
+            score += 500
+        case ..<900:
+            score += 250
+        case ..<3_600:
+            score += 120
+        case ..<21_600:
+            score += 40
+        default:
+            break
+        }
+
+        return score
+    }
+
+    /// Visible sessions (`isVisibleInIsland`), ranked by `displayPriority`
+    /// descending. `now` is a parameter (not read internally) so this stays
+    /// unit-testable without wall-clock flakiness — mirrors the reference's
+    /// `surfacedSessions`/`computeSessionBuckets().primary`.
+    func surfacedSessions(now: Date) -> [AgentSession] {
+        state.sessionsByID.values
+            .filter(\.isVisibleInIsland)
+            .sorted { lhs, rhs in
+                let lhsScore = displayPriority(for: lhs, now: now)
+                let rhsScore = displayPriority(for: rhs, now: now)
+                if lhsScore != rhsScore { return lhsScore > rhsScore }
+                if lhs.updatedAt != rhs.updatedAt { return lhs.updatedAt > rhs.updatedAt }
+                return lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
+            }
+    }
+
+    /// `islandSessionSections(group:sort:now:)` grouping into titled
+    /// sections, ready for `SessionListView`. Ported from the reference's
+    /// `islandSessionSections` — same four grouping modes, same
+    /// state-bucket ordering (approval → answer → running → done → idle).
+    func islandSessionSections(group: IslandSessionGroup, sort: IslandSessionSort, now: Date) -> [IslandSessionSection] {
+        let sessions = sortIslandSessions(surfacedSessions(now: now), sort: sort)
+
+        switch group {
+        case .none:
+            return [IslandSessionSection(id: "all", title: "Sessions", sessions: sessions)]
+        case .state:
+            return stateGroupedSections(for: sessions, now: now)
+        case .agent:
+            return AgentTool.allCases.compactMap { tool in
+                let list = sessions.filter { $0.tool == tool }
+                guard !list.isEmpty else { return nil }
+                return IslandSessionSection(id: "agent-\(tool.rawValue)", title: tool.displayName, sessions: list)
+            }
+        case .project:
+            let names = Set(sessions.map(Self.projectGroupName(for:))).sorted {
+                $0.localizedStandardCompare($1) == .orderedAscending
+            }
+            return names.compactMap { name in
+                let list = sessions.filter { Self.projectGroupName(for: $0) == name }
+                guard !list.isEmpty else { return nil }
+                return IslandSessionSection(id: "project-\(name)", title: name, sessions: list)
+            }
+        }
+    }
+
+    private func sortIslandSessions(_ sessions: [AgentSession], sort: IslandSessionSort) -> [AgentSession] {
+        switch sort {
+        case .attention:
+            // Already ranked by displayPriority via surfacedSessions(now:).
+            return sessions
+        case .lastUpdate:
+            return sessions.sorted { lhs, rhs in
+                if lhs.updatedAt == rhs.updatedAt {
+                    return lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
+                }
+                return lhs.updatedAt > rhs.updatedAt
+            }
+        }
+    }
+
+    private func stateGroupedSections(for sessions: [AgentSession], now: Date) -> [IslandSessionSection] {
+        let definitions: [(id: String, title: String, include: (AgentSession) -> Bool)] = [
+            ("approval", "Needs approval", { $0.phase == .waitingForApproval }),
+            ("answer", "Needs answer", { $0.phase == .waitingForAnswer }),
+            ("running", "In progress", { $0.phase == .running }),
+            ("done", "Just done", { session in
+                session.phase == .completed
+                    && !session.isStaleCompleted(now: now, threshold: Self.completedStaleThreshold)
+            }),
+            ("idle", "Idle", { session in
+                session.phase == .completed
+                    && session.isStaleCompleted(now: now, threshold: Self.completedStaleThreshold)
+            }),
+        ]
+
+        return definitions.compactMap { definition in
+            let list = sessions.filter(definition.include)
+            guard !list.isEmpty else { return nil }
+            return IslandSessionSection(id: "state-\(definition.id)", title: definition.title, sessions: list)
+        }
+    }
+
+    private static func projectGroupName(for session: AgentSession) -> String {
+        if let workspace = session.jumpTarget?.workspaceName.trimmingCharacters(in: .whitespacesAndNewlines),
+           !workspace.isEmpty {
+            return workspace
+        }
+
+        let title = session.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else { return session.tool.displayName }
+
+        let pieces = title.split(separator: "·", maxSplits: 1).map {
+            String($0).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return pieces.last?.isEmpty == false ? pieces.last! : title
+    }
+}
+
+// MARK: - Task 2.5: grouping / sort / section types
+
+/// How `islandSessionSections` buckets the ranked session list.
+enum IslandSessionGroup: Equatable {
+    case none, state, agent, project
+}
+
+/// How sessions are ordered within (and across, for `.none`) sections.
+enum IslandSessionSort: Equatable {
+    /// Reference-ranked order — `displayPriority` descending, already the
+    /// order `surfacedSessions(now:)` returns.
+    case attention
+    /// Most-recently-updated first.
+    case lastUpdate
+}
+
+/// One titled group of sessions in the list — the shape `SessionListView`
+/// renders.
+struct IslandSessionSection: Identifiable, Equatable {
+    var id: String
+    var title: String
+    var sessions: [AgentSession]
 }
