@@ -33,6 +33,7 @@ TEST_FILES = %w[
   SessionStateTests.swift
   ClaudeEventMappingTests.swift
   AIAppModelTests.swift
+  AICoreEndToEndTests.swift
 ].freeze
 
 project = Xcodeproj::Project.open(PROJECT_PATH)

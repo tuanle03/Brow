@@ -177,10 +177,37 @@ final class ClaudeCodeBridge: ObservableObject {
                 AIAppModel.shared.ingest(mirroredEvents)
                 return .ok(jsonBody: "{}")
             case .permissionRequest(let payload):
+                // Task 1.8 fix: ingest the mirrored `.permissionRequested`
+                // event BEFORE the blocking store call (not after, as Task
+                // 1.7 left it), so `AIAppModel` shows `.waitingForApproval`
+                // live while the user is actually deciding, not only once
+                // the decision has already been made.
+                AIAppModel.shared.ingest(mirroredEvents)
                 // Suspends until the user decides in the notch, a saved
                 // rule matches, or the store's 55s timeout fires.
                 let body = await ClaudeCodeStore.shared.handlePermissionRequest(payload, rawJSON: parsed.rawJSON)
-                AIAppModel.shared.ingest(mirroredEvents)
+                // Reflect the resolution in the mirror so it leaves
+                // `.waitingForApproval` once the store has decided.
+                // `handlePermissionRequest` returns only the serialized
+                // hook-response body (String), not an `ApprovalDecision`
+                // value — recovering allow/deny from that string to call
+                // `AIAppModel.shared.approve(sessionID:_:)` would mean
+                // parsing the store's hook JSON back out (fragile: `.ask`
+                // serializes to `"{}"` with no decision key at all), and
+                // the store is out of scope to change here. `.actionableStateResolved`
+                // is the reducer's decision-agnostic exit from
+                // `.waitingForApproval`/`.waitingForAnswer` back to
+                // `.running`, so use that instead — it needs only the
+                // session id, which we already have.
+                if let sessionID = payload.sessionID {
+                    AIAppModel.shared.ingest([
+                        .actionableStateResolved(ActionableStateResolved(
+                            sessionID: sessionID,
+                            summary: "Permission resolved.",
+                            timestamp: Date()
+                        ))
+                    ])
+                }
                 return .ok(jsonBody: body)
             case .notification(let payload):
                 ClaudeCodeStore.shared.recordNotification(payload)
