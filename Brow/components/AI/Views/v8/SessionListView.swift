@@ -63,7 +63,7 @@ struct SessionListView: View {
 
             statusCounts
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 16)
         .padding(.vertical, 10)
     }
 
@@ -100,7 +100,7 @@ struct SessionListView: View {
         Text(section.title.uppercased())
             .font(.system(size: 10, weight: .bold))
             .foregroundStyle(V6Palette.paper.opacity(0.4))
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 16)
             .padding(.top, 10)
             .padding(.bottom, 4)
     }

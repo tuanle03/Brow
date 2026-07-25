@@ -67,7 +67,7 @@ struct SessionRowView: View {
             }
         }
         .padding(.vertical, 8)
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 16)
         .background(V6Palette.ink)
     }
 
