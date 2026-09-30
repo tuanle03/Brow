@@ -580,7 +580,9 @@ struct HUD: View {
     @Default(.enableGradient) var enableGradient
     @Default(.optionKeyAction) var optionKeyAction
     @Default(.hudReplacement) var hudReplacement
+    @Default(.externalDisplayControl) var externalDisplayControl
     @ObservedObject var coordinator = BrowViewCoordinator.shared
+    @ObservedObject var displayControl = DisplayControlCenter.shared
     @State private var accessibilityAuthorized = false
     
     var body: some View {
@@ -627,6 +629,54 @@ struct HUD: View {
                 }
             }
             
+            Section {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Control external displays with keyboard")
+                            .font(.headline)
+                        Text("Change brightness and speaker volume of external monitors over DDC/CI. Works with any keyboard.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 40)
+                    Defaults.Toggle("", key: .externalDisplayControl)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .controlSize(.large)
+                        .disabled(!accessibilityAuthorized)
+                }
+
+                Group {
+                    KeyboardShortcuts.Recorder("Brightness down:", name: .displayBrightnessDown)
+                    KeyboardShortcuts.Recorder("Brightness up:", name: .displayBrightnessUp)
+                    KeyboardShortcuts.Recorder("Mute:", name: .displayVolumeMute)
+                    KeyboardShortcuts.Recorder("Volume down:", name: .displayVolumeDown)
+                    KeyboardShortcuts.Recorder("Volume up:", name: .displayVolumeUp)
+                }
+                .disabled(!externalDisplayControl)
+
+                if displayControl.displays.isEmpty {
+                    Text("No external displays connected.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(displayControl.displays) { display in
+                        HStack {
+                            Text(display.name)
+                            Spacer()
+                            Text(display.statusLabel(
+                                hasSpeakers: displayControl.displayAudioNames.contains(ExternalDisplay.normalizedName(display.name))
+                            ))
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            } header: {
+                Text("External displays")
+            } footer: {
+                Text("Brightness follows the display under the pointer. Volume keys drive the monitor's speakers when they are the current sound output. Monitors without DDC/CI are dimmed in software.")
+            }
+
             Section {
                 Picker("Option key behaviour", selection: $optionKeyAction) {
                     ForEach(OptionKeyAction.allCases) { opt in
