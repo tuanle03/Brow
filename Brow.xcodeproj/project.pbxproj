@@ -197,11 +197,13 @@
 		D588407057AD4326B96880FF /* AgentBridgeEnvelopeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F93E46F9C2B4A1592780CBB /* AgentBridgeEnvelopeTests.swift */; };
 		E7903118337E5DECAABB83F1 /* SessionListDerivationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85714159A8A881912862B7C3 /* SessionListDerivationTests.swift */; };
 		E9114EBC2101D2EB7EDBE3B2 /* DDCChannelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AFFD637D15515408F8A8E88 /* DDCChannelTests.swift */; };
+		E956A14D54E885D27F66DE90 /* GammaDimmer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 620132A9871A3220DBC2073F /* GammaDimmer.swift */; };
 		EDCD03BDDD0B62F246AC6D40 /* IslandSurfaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA292F294EE4B4A7A46DC83D /* IslandSurfaceView.swift */; };
 		EF0AE4475F14C603ED8B6539 /* NotchHostingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E5374C9D38DD60FB207FE97 /* NotchHostingView.swift */; };
 		F2857591B33CD27086D05868 /* ClaudeCodeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5565EAB6E4A626F41BEC5B04 /* ClaudeCodeStore.swift */; };
 		F38DE6482D8243E7008B5C6D /* BatteryActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F38DE6472D8243E2008B5C6D /* BatteryActivityManager.swift */; };
 		F51E9467CD4948C85C75DE8E /* BrowAgentHook in Embed BrowAgentHook */ = {isa = PBXBuildFile; fileRef = C1D9BDF4095C4633816021BD /* BrowAgentHook */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		F760C53E8D76992A0FA4DB54 /* GammaDimmerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AB50E37FE78511E45EB5921 /* GammaDimmerTests.swift */; };
 		F814BA340A43AC18D9008F24 /* DDCChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F9C9EF03D8F8FA5655F88EF /* DDCChannel.swift */; };
 		FBEFE1DC634B1EC2DE98798B /* ClaudeEventMappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 149BDA4E2F27F0BDE7DBF68C /* ClaudeEventMappingTests.swift */; };
 		FD2F4FE529CF7CC75FC045D2 /* SessionRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E37E96004164DDA452AAB785 /* SessionRowView.swift */; };
@@ -374,6 +376,7 @@
 		1900068085576BFABF955900 /* IslandDesignPalette.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IslandDesignPalette.swift; sourceTree = "<group>"; };
 		32BA6C5A41A6A419B7511B48 /* AISettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AISettingsView.swift; sourceTree = "<group>"; };
 		38F6C46CB18EAE333F01388B /* QuestionCardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QuestionCardView.swift; sourceTree = "<group>"; };
+		3AB50E37FE78511E45EB5921 /* GammaDimmerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GammaDimmerTests.swift; sourceTree = "<group>"; };
 		3E5374C9D38DD60FB207FE97 /* NotchHostingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchHostingView.swift; sourceTree = "<group>"; };
 		3EDFB11BE5A61C9322A42AC0 /* JumpTarget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = JumpTarget.swift; sourceTree = "<group>"; };
 		3F75412792DF754B016B47AF /* SessionState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SessionState.swift; sourceTree = "<group>"; };
@@ -390,6 +393,7 @@
 		5917FD102E57891600E87F1C /* MediaKeyInterceptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaKeyInterceptor.swift; sourceTree = "<group>"; };
 		5955950C2E900ED800C66711 /* ApplicationRelauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationRelauncher.swift; sourceTree = "<group>"; };
 		59D8C23B2E589FAA00147B33 /* VolumeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeManager.swift; sourceTree = "<group>"; };
+		620132A9871A3220DBC2073F /* GammaDimmer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GammaDimmer.swift; sourceTree = "<group>"; };
 		6EB1FE4FA1C63669E94FABBE /* SessionListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SessionListView.swift; sourceTree = "<group>"; };
 		6F9C9EF03D8F8FA5655F88EF /* DDCChannel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DDCChannel.swift; sourceTree = "<group>"; };
 		76DF98C0B2319A5CE47187D3 /* ClaudeCodeEvent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClaudeCodeEvent.swift; sourceTree = "<group>"; };
@@ -883,6 +887,7 @@
 			isa = PBXGroup;
 			children = (
 				363BB69EA3F6C8EABDFB65C2 /* DDC */,
+				620132A9871A3220DBC2073F /* GammaDimmer.swift */,
 			);
 			name = DisplayControl;
 			path = DisplayControl;
@@ -1103,6 +1108,7 @@
 				51A4A5C9E11DA80FA7009A4B /* DDCPacketTests.swift */,
 				0AFFD637D15515408F8A8E88 /* DDCChannelTests.swift */,
 				9F2213C4CFEB7F11152CE50D /* DDCWriteCoalescerTests.swift */,
+				3AB50E37FE78511E45EB5921 /* GammaDimmerTests.swift */,
 			);
 			name = BrowTests;
 			path = BrowTests;
@@ -1449,6 +1455,7 @@
 				3201DB9F271867FF164C5629 /* DDCPacket.swift in Sources */,
 				F814BA340A43AC18D9008F24 /* DDCChannel.swift in Sources */,
 				0A914AF5EF4A48B2FC849B6D /* DDCWriteCoalescer.swift in Sources */,
+				E956A14D54E885D27F66DE90 /* GammaDimmer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1487,6 +1494,7 @@
 				70E0CB61136DA0172CC018C4 /* DDCPacketTests.swift in Sources */,
 				E9114EBC2101D2EB7EDBE3B2 /* DDCChannelTests.swift in Sources */,
 				7BE6083BE26FE96D659C660F /* DDCWriteCoalescerTests.swift in Sources */,
+				F760C53E8D76992A0FA4DB54 /* GammaDimmerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
