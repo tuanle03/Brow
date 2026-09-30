@@ -175,9 +175,6 @@ final class MediaKeyInterceptor {
 
     private func handleKeyEvent(type: CGEventType, _ cgEvent: CGEvent) -> Unmanaged<CGEvent>? {
         let keyCode = Int(cgEvent.getIntegerValueField(.keyboardEventKeycode))
-        if type == .keyDown, [120, 122, 109, 103, 111].contains(keyCode) {
-            fputs("[MediaKeyInterceptor] keyDown code=\(keyCode) flags=\(cgEvent.flags.rawValue) feature=\(Defaults[.externalDisplayControl])\n", stderr)
-        }
         if type == .keyUp {
             return swallowedKeys.shouldSwallowUp(keyCode) ? nil : Unmanaged.passUnretained(cgEvent)
         }
