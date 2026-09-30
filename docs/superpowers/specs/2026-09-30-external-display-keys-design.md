@@ -30,7 +30,7 @@ internal keyboard.
 | Decision | Choice |
 |---|---|
 | **Key mapping** | Fixed defaults F1/F2 (brightness −/+), F10/F11/F12 (mute/vol−/vol+), **rebindable** in Settings. Physical media keys (NX events) also supported. |
-| **Brightness target** | Display currently under the mouse cursor. |
+| **Brightness target** | The active display — the screen of the window with keyboard focus (`NSScreen.main`); changed from "under the mouse cursor" on 2026-09-30 at the stakeholder's request. The HUD appears only on that screen. |
 | **Volume target** | Follows the current default audio output: monitor audio (HDMI/DP) → DDC volume on that monitor; anything else → system volume as today. |
 | **No-DDC fallback** | Software dimming via gamma table (can only dim, never exceed the monitor's hardware level). No fallback for volume. |
 | **Architecture** | DDC in the main app (both app and XPC helper are non-sandboxed, so no reason to add an XPC hop); extend the existing event tap; store bindings with `KeyboardShortcuts.Name`. |
@@ -123,7 +123,7 @@ unchanged (no behaviour change for users who never enabled HUD replacement).
 
 ```
 F2 → Router.brightness(delta: +1/16)
-   → screen under NSEvent.mouseLocation → CGDirectDisplayID
+   → active screen (NSScreen.main) → CGDirectDisplayID
       built-in           → BrightnessManager.setRelative (unchanged path)
       external, DDC ok   → cache += delta (clamped 0…1) → HUD(.brightness, cache) immediately
                            → coalescer.submit(round(cache * max))
@@ -174,7 +174,7 @@ In the existing HUD section of `SettingsView`:
 ### Unit tests (XCTest, `BrowTests/`)
 
 Hardware seams behind protocols: `DDCTransport`, `GammaApplying`, `AudioOutputProviding`, plus a
-`DisplayProviding` that supplies the screen under the cursor.
+`DisplayProviding` that supplies the active screen.
 
 | Test file | Covers |
 |---|---|
@@ -186,7 +186,7 @@ Hardware seams behind protocols: `DDCTransport`, `GammaApplying`, `AudioOutputPr
 
 ### Manual verification (on target hardware)
 
-1. External keyboard: F1/F2 on each Dell, following the cursor; hold for repeat; `⌥⇧` fine step; HUD appears.
+1. External keyboard: F1/F2 on each Dell, following the focused window; hold for repeat; `⌥⇧` fine step; HUD appears.
 2. Apple internal keyboard media keys drive the same actions.
 3. F10–F12 with output = DELL S2421H (DDC volume) vs Bluetooth headset (system volume).
 4. Unplug/replug a monitor; sleep/wake; keys keep working.

@@ -11,7 +11,7 @@ import CoreGraphics
 
 @MainActor
 protocol DisplayControlEnvironment: AnyObject {
-    func displayUnderCursor() -> CGDirectDisplayID?
+    func activeDisplay() -> CGDirectDisplayID?
     func externalDisplays() -> [ExternalDisplay]
     func defaultAudioOutput() -> AudioOutputInfo?
     func applyGamma(level: Double, to displayID: CGDirectDisplayID)
@@ -37,7 +37,7 @@ final class DisplayControlRouter {
     /// Whether an NX media key should be taken away from macOS.
     func claimsMediaKey(_ action: DisplayKeyAction) -> Bool {
         switch action {
-        case .brightnessDown, .brightnessUp: cursorDisplay() != nil
+        case .brightnessDown, .brightnessUp: activeDisplay() != nil
         case .volumeMute, .volumeDown, .volumeUp: speakerDisplay() != nil
         }
     }
@@ -55,8 +55,8 @@ final class DisplayControlRouter {
 
     // MARK: - Targets
 
-    private func cursorDisplay() -> ExternalDisplay? {
-        guard let id = env.displayUnderCursor() else { return nil }
+    private func activeDisplay() -> ExternalDisplay? {
+        guard let id = env.activeDisplay() else { return nil }
         return env.externalDisplays().first { $0.id == id }
     }
 
@@ -72,7 +72,7 @@ final class DisplayControlRouter {
     // MARK: - Brightness
 
     private func adjustBrightness(delta: Double) {
-        guard let display = cursorDisplay() else {
+        guard let display = activeDisplay() else {
             env.adjustBuiltinBrightness(delta: Float(delta))
             return
         }

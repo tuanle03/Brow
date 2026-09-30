@@ -161,9 +161,14 @@ final class DisplayControlCenter: ObservableObject, DisplayControlEnvironment {
 
     // MARK: - DisplayControlEnvironment
 
-    func displayUnderCursor() -> CGDirectDisplayID? {
-        let location = NSEvent.mouseLocation
-        return NSScreen.screens.first { NSMouseInRect(location, $0.frame, false) }.flatMap(Self.screenNumber)
+    /// The screen of the window that has keyboard focus (`NSScreen.main`) —
+    /// not the pointer. Falls back to the pointer's screen if there is none.
+    func activeDisplay() -> CGDirectDisplayID? {
+        activeScreen().flatMap(Self.screenNumber)
+    }
+
+    private func activeScreen() -> NSScreen? {
+        NSScreen.main ?? NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) }
     }
 
     func externalDisplays() -> [ExternalDisplay] { displays }
@@ -179,8 +184,8 @@ final class DisplayControlCenter: ObservableObject, DisplayControlEnvironment {
     }
 
     func showHUD(_ type: SneakContentType, value: Double) {
-        // Only the screen the pointer is on shows the HUD.
-        let screen = NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) }
+        // Only the active screen shows the HUD.
+        let screen = activeScreen()
         BrowViewCoordinator.shared.toggleSneakPeek(status: true, type: type, value: CGFloat(value), force: true, screenUUID: screen?.displayUUID)
     }
 

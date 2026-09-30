@@ -8,7 +8,7 @@ private final class FakeWriter: LevelWriter {
 
 @MainActor
 private final class FakeEnvironment: DisplayControlEnvironment {
-    var cursorDisplay: CGDirectDisplayID?
+    var activeID: CGDirectDisplayID?
     var displays: [ExternalDisplay] = []
     var output: AudioOutputInfo?
     private(set) var gamma: [(level: Double, id: CGDirectDisplayID)] = []
@@ -18,7 +18,7 @@ private final class FakeEnvironment: DisplayControlEnvironment {
     private(set) var systemVolume: [(up: Bool, fine: Bool)] = []
     private(set) var systemMuteToggles = 0
 
-    func displayUnderCursor() -> CGDirectDisplayID? { cursorDisplay }
+    func activeDisplay() -> CGDirectDisplayID? { activeID }
     func externalDisplays() -> [ExternalDisplay] { displays }
     func defaultAudioOutput() -> AudioOutputInfo? { output }
     func applyGamma(level: Double, to displayID: CGDirectDisplayID) { gamma.append((level, displayID)) }
@@ -46,7 +46,7 @@ final class DisplayControlRouterTests: XCTestCase {
                                   brightnessWriter: brightnessWriter, volumeWriter: volumeWriter,
                                   brightness: 0.5, volume: 0.4, softwareLevel: 1)
         env.displays = [display]
-        env.cursorDisplay = 2
+        env.activeID = 2
         env.output = AudioOutputInfo(name: "DELL S2421H", isDisplayAudio: true)
     }
 
@@ -119,14 +119,14 @@ final class DisplayControlRouterTests: XCTestCase {
     }
 
     func testCursorOnBuiltinUsesBrightnessManagerPath() {
-        env.cursorDisplay = 1
+        env.activeID = 1
         router.perform(.brightnessDown, fine: false)
         XCTAssertEqual(env.builtinDeltas, [-0.0625])
         XCTAssertTrue(brightnessWriter.values.isEmpty)
     }
 
     func testNoCursorDisplayUsesBuiltinPath() {
-        env.cursorDisplay = nil
+        env.activeID = nil
         router.perform(.brightnessUp, fine: false)
         XCTAssertEqual(env.builtinDeltas, [0.0625])
     }
@@ -155,7 +155,7 @@ final class DisplayControlRouterTests: XCTestCase {
         let noDDC = ExternalDisplay(id: 3, uuid: "UUID-3", name: "TV", brightnessWriter: nil, volumeWriter: nil,
                                     brightness: 0.5, volume: 0.5, softwareLevel: 1)
         env.displays = [noDDC]
-        env.cursorDisplay = 3
+        env.activeID = 3
         router.perform(.brightnessDown, fine: false)
         XCTAssertEqual(env.gamma.last?.id, 3)
     }
@@ -227,7 +227,7 @@ final class DisplayControlRouterTests: XCTestCase {
         XCTAssertTrue(router.claimsMediaKey(.brightnessUp))
         XCTAssertTrue(router.claimsMediaKey(.volumeUp))
 
-        env.cursorDisplay = 1
+        env.activeID = 1
         env.output = AudioOutputInfo(name: "MacBook Pro Speakers", isDisplayAudio: false)
         XCTAssertFalse(router.claimsMediaKey(.brightnessUp))
         XCTAssertFalse(router.claimsMediaKey(.volumeMute))
