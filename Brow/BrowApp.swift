@@ -90,6 +90,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         cleanupDragDetectors()
         cleanupWindows()
         XPCHelperClient.shared.stopMonitoringAccessibilityAuthorization()
+        MainActor.assumeIsolated { DisplayControlCenter.shared.stop() } // restores gamma if we dimmed
     }
 
     @MainActor

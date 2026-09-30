@@ -212,6 +212,10 @@ class BrowViewCoordinator: ObservableObject {
         Task { @MainActor in
             helloAnimationRunning = firstLaunch
 
+            if Defaults[.externalDisplayControl] {
+                DisplayControlCenter.shared.start()
+            }
+
             if Defaults[.hudReplacement] {
                 let authorized = await XPCHelperClient.shared.isAccessibilityAuthorized()
                 if !authorized {
@@ -255,12 +259,12 @@ class BrowViewCoordinator: ObservableObject {
 
     func toggleSneakPeek(
         status: Bool, type: SneakContentType, duration: TimeInterval = 1.5, value: CGFloat = 0,
-        icon: String = ""
+        icon: String = "", force: Bool = false
     ) {
         sneakPeekDuration = duration
         if type != .music {
             // close()
-            if !Defaults[.hudReplacement] {
+            if !Defaults[.hudReplacement] && !force {
                 return
             }
         }
