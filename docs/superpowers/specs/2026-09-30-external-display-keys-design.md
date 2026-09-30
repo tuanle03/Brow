@@ -1,7 +1,7 @@
 # External Display Brightness & Volume Keys — Design Spec
 
 **Date:** 2026-09-30
-**Status:** Draft for review (no implementation started)
+**Status:** Implemented; manual hardware checklist (§7) pending user verification
 **Reference project:** [`MonitorControl/MonitorControl`](https://github.com/MonitorControl/MonitorControl) (DDC/CI over `IOAVService` on Apple Silicon, gamma fallback, audio-device ↔ display matching).
 
 ---
