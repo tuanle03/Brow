@@ -142,6 +142,7 @@
 		7DB37266A6CFAE2864764A82 /* ClosedPillPrecedenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57FC792433661679886F99B5 /* ClosedPillPrecedenceTests.swift */; };
 		82FE10C99095F5125A724237 /* BridgePost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9095869BFD9037EBD7DD3731 /* BridgePost.swift */; };
 		912304BF14946BA9A0077BB8 /* ClaudeCodeEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76DF98C0B2319A5CE47187D3 /* ClaudeCodeEvent.swift */; };
+		93D1DABD979BFC388BD6DBB2 /* DisplayKeyBindingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 821E65A85CD1BAE140202BE4 /* DisplayKeyBindingsTests.swift */; };
 		965169817E299AC0A9338B9E /* AgentSessionVisibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 838C950EBF1222069EA903E6 /* AgentSessionVisibilityTests.swift */; };
 		97B7E74624020EF870B19C7E /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C10C94F5818DBB41856030C /* SmokeTests.swift */; };
 		988E14348DB094FDB32922D8 /* QuestionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77B801E03A7F6BEF192278E8 /* QuestionModels.swift */; };
@@ -190,6 +191,7 @@
 		B9E1A2C3D4F5A6B7C8D9E0F2 /* ApprovalRoundTripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9E1A2C3D4F5A6B7C8D9E0F1 /* ApprovalRoundTripTests.swift */; };
 		C3C8375FA2E5E3D5FA9E70FA /* AIAppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07C632841AE7D96F59C2CB1 /* AIAppModel.swift */; };
 		C7DDB52001DBCD22DBD6425F /* ClaudeCodeBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEE90A5FC095E57C34A393C5 /* ClaudeCodeBridge.swift */; };
+		C9A05CDC1880DB5F14DD21F5 /* DisplayKeyBindings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ADE8EA7F2644B73648D74FD /* DisplayKeyBindings.swift */; };
 		CC73CFFA07C3F14EE8AB2414 /* AgentTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = F67FDF7FEB2234549801EED9 /* AgentTool.swift */; };
 		D26ACCCCB2D3A4BDDC700856 /* AISettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32BA6C5A41A6A419B7511B48 /* AISettingsView.swift */; };
 		D35FE994D92D4D4E9E8A7880 /* ClaudeCodeHookInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9827C1AD5BA0F5A25573640C /* ClaudeCodeHookInstaller.swift */; };
@@ -273,6 +275,7 @@
 		004FAC3CA8BC40DFE558E562 /* ClaudeHookInstallCommandTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClaudeHookInstallCommandTests.swift; sourceTree = "<group>"; };
 		04799BFEABE5EAC7F5F0771B /* IslandSurfaceMappingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IslandSurfaceMappingTests.swift; sourceTree = "<group>"; };
 		07D3FE9F7444EF4D457F53B5 /* AgentEvent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AgentEvent.swift; sourceTree = "<group>"; };
+		0ADE8EA7F2644B73648D74FD /* DisplayKeyBindings.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DisplayKeyBindings.swift; sourceTree = "<group>"; };
 		0AFFD637D15515408F8A8E88 /* DDCChannelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DDCChannelTests.swift; sourceTree = "<group>"; };
 		0D911F5475B0F91CCE3E3A23 /* UnifiedBarsGlyph.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UnifiedBarsGlyph.swift; sourceTree = "<group>"; };
 		0EA7DB8CE255DD7FF015F73E /* CompletionCardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CompletionCardView.swift; sourceTree = "<group>"; };
@@ -400,6 +403,7 @@
 		77B801E03A7F6BEF192278E8 /* QuestionModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QuestionModels.swift; sourceTree = "<group>"; };
 		7924153A55D364123AC94DB2 /* UnifiedBarsModeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UnifiedBarsModeTests.swift; sourceTree = "<group>"; };
 		7F93E46F9C2B4A1592780CBB /* AgentBridgeEnvelopeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AgentBridgeEnvelopeTests.swift; sourceTree = "<group>"; };
+		821E65A85CD1BAE140202BE4 /* DisplayKeyBindingsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DisplayKeyBindingsTests.swift; sourceTree = "<group>"; };
 		838C950EBF1222069EA903E6 /* AgentSessionVisibilityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AgentSessionVisibilityTests.swift; sourceTree = "<group>"; };
 		85714159A8A881912862B7C3 /* SessionListDerivationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SessionListDerivationTests.swift; sourceTree = "<group>"; };
 		88EDB619E726874BCC1A7DD7 /* V8ClosedPill.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = V8ClosedPill.swift; sourceTree = "<group>"; };
@@ -888,6 +892,7 @@
 			children = (
 				363BB69EA3F6C8EABDFB65C2 /* DDC */,
 				620132A9871A3220DBC2073F /* GammaDimmer.swift */,
+				0ADE8EA7F2644B73648D74FD /* DisplayKeyBindings.swift */,
 			);
 			name = DisplayControl;
 			path = DisplayControl;
@@ -1109,6 +1114,7 @@
 				0AFFD637D15515408F8A8E88 /* DDCChannelTests.swift */,
 				9F2213C4CFEB7F11152CE50D /* DDCWriteCoalescerTests.swift */,
 				3AB50E37FE78511E45EB5921 /* GammaDimmerTests.swift */,
+				821E65A85CD1BAE140202BE4 /* DisplayKeyBindingsTests.swift */,
 			);
 			name = BrowTests;
 			path = BrowTests;
@@ -1456,6 +1462,7 @@
 				F814BA340A43AC18D9008F24 /* DDCChannel.swift in Sources */,
 				0A914AF5EF4A48B2FC849B6D /* DDCWriteCoalescer.swift in Sources */,
 				E956A14D54E885D27F66DE90 /* GammaDimmer.swift in Sources */,
+				C9A05CDC1880DB5F14DD21F5 /* DisplayKeyBindings.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1495,6 +1502,7 @@
 				E9114EBC2101D2EB7EDBE3B2 /* DDCChannelTests.swift in Sources */,
 				7BE6083BE26FE96D659C660F /* DDCWriteCoalescerTests.swift in Sources */,
 				F760C53E8D76992A0FA4DB54 /* GammaDimmerTests.swift in Sources */,
+				93D1DABD979BFC388BD6DBB2 /* DisplayKeyBindingsTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
