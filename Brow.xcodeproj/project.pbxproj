@@ -11,6 +11,7 @@
 		04FB41347F57F6D261C0A631 /* AgentEventCodableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5218CA43F77DDF91821CB7A3 /* AgentEventCodableTests.swift */; };
 		0713219788B17AE829117897 /* SessionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F75412792DF754B016B47AF /* SessionState.swift */; };
 		0997B7D19B18DD9D937AC783 /* CompletionCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EA7DB8CE255DD7FF015F73E /* CompletionCardView.swift */; };
+		0A914AF5EF4A48B2FC849B6D /* DDCWriteCoalescer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B550F3C57BB6AAE4D11DA46A /* DDCWriteCoalescer.swift */; };
 		0BBA03047E555ED035E0BF05 /* AIAppModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45A4D7418C0592C20F47F5E /* AIAppModelTests.swift */; };
 		0F9CF2690ABD2B19E29CAC9F /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A9C523551D0F063FD2B902C /* main.swift */; };
 		1100290C2E847E2800035A57 /* NSItemProvider+LoadHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1100290B2E847E2800035A57 /* NSItemProvider+LoadHelpers.swift */; };
@@ -137,6 +138,7 @@
 		6E445112B4B8E749A14AC1D6 /* IslandSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = D051FC8204C6034F55F51056 /* IslandSurface.swift */; };
 		70E0CB61136DA0172CC018C4 /* DDCPacketTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51A4A5C9E11DA80FA7009A4B /* DDCPacketTests.swift */; };
 		76ECB43752778EF46907E021 /* SessionListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EB1FE4FA1C63669E94FABBE /* SessionListView.swift */; };
+		7BE6083BE26FE96D659C660F /* DDCWriteCoalescerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F2213C4CFEB7F11152CE50D /* DDCWriteCoalescerTests.swift */; };
 		7DB37266A6CFAE2864764A82 /* ClosedPillPrecedenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57FC792433661679886F99B5 /* ClosedPillPrecedenceTests.swift */; };
 		82FE10C99095F5125A724237 /* BridgePost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9095869BFD9037EBD7DD3731 /* BridgePost.swift */; };
 		912304BF14946BA9A0077BB8 /* ClaudeCodeEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76DF98C0B2319A5CE47187D3 /* ClaudeCodeEvent.swift */; };
@@ -408,6 +410,7 @@
 		9A987A032C73CA66005CA465 /* ShelfView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShelfView.swift; sourceTree = "<group>"; };
 		9AB0C6BB2C73C9CB00F7CD30 /* NotchHomeView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotchHomeView.swift; sourceTree = "<group>"; };
 		9BD9C34B5867B8BAB2685BCA /* ClaudeEventMapping.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClaudeEventMapping.swift; sourceTree = "<group>"; };
+		9F2213C4CFEB7F11152CE50D /* DDCWriteCoalescerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DDCWriteCoalescerTests.swift; sourceTree = "<group>"; };
 		A8C0A60644924EACB99937CB /* CardActionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CardActionTests.swift; sourceTree = "<group>"; };
 		ADC61FA4E3EF8AFFE8A8B94C /* PermissionModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PermissionModels.swift; sourceTree = "<group>"; };
 		AE1050121000000000000001 /* OpenIslandSizingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OpenIslandSizingTests.swift; sourceTree = "<group>"; };
@@ -439,6 +442,7 @@
 		B1F0A0012E60000100000001 /* BrightnessManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrightnessManager.swift; sourceTree = "<group>"; };
 		B1F747F82EC7E94000F841DB /* LottieView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LottieView.swift; sourceTree = "<group>"; };
 		B1FEB4982C7686630066EBBC /* PanGesture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanGesture.swift; sourceTree = "<group>"; };
+		B550F3C57BB6AAE4D11DA46A /* DDCWriteCoalescer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DDCWriteCoalescer.swift; sourceTree = "<group>"; };
 		B7715291ED179E835DDBBF40 /* IslandActionButtonStyle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IslandActionButtonStyle.swift; sourceTree = "<group>"; };
 		B9E1A2C3D4F5A6B7C8D9E0F1 /* ApprovalRoundTripTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ApprovalRoundTripTests.swift; sourceTree = "<group>"; };
 		BA292F294EE4B4A7A46DC83D /* IslandSurfaceView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IslandSurfaceView.swift; sourceTree = "<group>"; };
@@ -850,6 +854,7 @@
 			children = (
 				532FDF54301753555077FE33 /* DDCPacket.swift */,
 				6F9C9EF03D8F8FA5655F88EF /* DDCChannel.swift */,
+				B550F3C57BB6AAE4D11DA46A /* DDCWriteCoalescer.swift */,
 			);
 			name = DDC;
 			path = DDC;
@@ -1097,6 +1102,7 @@
 				AE1050121000000000000001 /* OpenIslandSizingTests.swift */,
 				51A4A5C9E11DA80FA7009A4B /* DDCPacketTests.swift */,
 				0AFFD637D15515408F8A8E88 /* DDCChannelTests.swift */,
+				9F2213C4CFEB7F11152CE50D /* DDCWriteCoalescerTests.swift */,
 			);
 			name = BrowTests;
 			path = BrowTests;
@@ -1442,6 +1448,7 @@
 				EDCD03BDDD0B62F246AC6D40 /* IslandSurfaceView.swift in Sources */,
 				3201DB9F271867FF164C5629 /* DDCPacket.swift in Sources */,
 				F814BA340A43AC18D9008F24 /* DDCChannel.swift in Sources */,
+				0A914AF5EF4A48B2FC849B6D /* DDCWriteCoalescer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1479,6 +1486,7 @@
 				AE1050121000000000000002 /* OpenIslandSizingTests.swift in Sources */,
 				70E0CB61136DA0172CC018C4 /* DDCPacketTests.swift in Sources */,
 				E9114EBC2101D2EB7EDBE3B2 /* DDCChannelTests.swift in Sources */,
+				7BE6083BE26FE96D659C660F /* DDCWriteCoalescerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
