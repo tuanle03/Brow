@@ -124,6 +124,7 @@ class BrowViewCoordinator: ObservableObject {
     @Published var optionKeyPressed: Bool = true
     private var accessibilityObserver: Any?
     private var hudReplacementCancellable: AnyCancellable?
+    private var externalDisplayControlCancellable: AnyCancellable?
 
     private init() {
         // Perform migration from name-based to UUID-based storage
@@ -177,7 +178,7 @@ class BrowViewCoordinator: ObservableObject {
             queue: .main
         ) { _ in
             Task { @MainActor in
-                if Defaults[.hudReplacement] {
+                if Defaults[.hudReplacement] || Defaults[.externalDisplayControl] {
                     await MediaKeyInterceptor.shared.start(promptIfNeeded: false)
                 }
             }
@@ -203,8 +204,29 @@ class BrowViewCoordinator: ObservableObject {
                                 Defaults[.hudReplacement] = false
                             }
                         }
-                    } else {
+                    } else if !Defaults[.externalDisplayControl] {
                         MediaKeyInterceptor.shared.stop()
+                    }
+                }
+            }
+
+        // `options: []` — no initial emission, so launch never prompts for Accessibility.
+        externalDisplayControlCancellable = Defaults.publisher(.externalDisplayControl, options: [])
+            .sink { change in
+                Task { @MainActor in
+                    if change.newValue {
+                        DisplayControlCenter.shared.start()
+                        let granted = await XPCHelperClient.shared.ensureAccessibilityAuthorization(promptIfNeeded: true)
+                        if granted {
+                            await MediaKeyInterceptor.shared.start()
+                        } else {
+                            Defaults[.externalDisplayControl] = false
+                        }
+                    } else {
+                        DisplayControlCenter.shared.stop()
+                        if !Defaults[.hudReplacement] {
+                            MediaKeyInterceptor.shared.stop()
+                        }
                     }
                 }
             }
@@ -214,6 +236,9 @@ class BrowViewCoordinator: ObservableObject {
 
             if Defaults[.externalDisplayControl] {
                 DisplayControlCenter.shared.start()
+                if await XPCHelperClient.shared.isAccessibilityAuthorized() {
+                    await MediaKeyInterceptor.shared.start(promptIfNeeded: false)
+                }
             }
 
             if Defaults[.hudReplacement] {
