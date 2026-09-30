@@ -48,10 +48,11 @@ internal keyboard.
 ```
 Brow/Managers/DisplayControl/
   DDC/DDCPacket.swift           — pure: encode VCP get/set, checksum, parse get-reply (current, max)
+  DDC/DDCChannel.swift          — DDCTransport protocol + retrying VCP read/write over a transport (MonitorControl timings)
   DDC/Arm64DDCTransport.swift   — IOAVServiceCreateWithService / ReadI2C / WriteI2C via dlsym; conforms to DDCTransport
   ExternalDisplay.swift         — one monitor: CGDirectDisplayID, UUID, name, transport, capability, cached values
   DisplayRegistry.swift         — CGDisplay ↔ IOAVService matching; rebuilds on reconfiguration and wake
-  DDCWriteCoalescer.swift       — per-display serial queue, latest-value-wins, retry, failure counting
+  DDC/DDCWriteCoalescer.swift   — latest-value-wins writer on the DDC serial queue, reports each result
   GammaDimmer.swift             — CGSetDisplayTransferByTable fallback; restore on disable/quit
   DisplayControlRouter.swift    — @MainActor entry point: brightness(delta:), volume(delta:), toggleMute()
 Brow/observers/MediaKeyInterceptor.swift  — adds keyDown/keyUp handling, shortcut matching, tap re-enable
@@ -64,11 +65,12 @@ Brow/components/Settings/SettingsView.swift (HUD section) — toggle, 5 recorder
 
 | Unit | Does | Depends on |
 |---|---|---|
-| `DDCPacket` | Builds DDC/CI payloads written to I2C address `0x37`, sub-address `0x51`: set = `[0x84, 0x03, vcp, hi, lo, chk]`, get = `[0x82, 0x01, vcp, chk]`, where `chk = 0x6E ^ 0x51 ^ (all payload bytes)`. Parses the 11-byte get-reply (`… 0x02, result, vcp, type, maxHi, maxLo, curHi, curLo, chk`) into `(current: UInt16, max: UInt16)` or an error. | nothing (pure) |
-| `DDCTransport` (protocol) | `write(_ bytes:) throws`, `read(count:) throws -> [UInt8]` for one display. | — |
+| `DDCPacket` | Builds DDC/CI payloads written to I2C address `0x37`, sub-address `0x51` (framing copied from MonitorControl `Arm64DDC.performDDCCommunication`): set = `[0x84, 0x03, vcp, hi, lo, chk]` with `chk = 0x6E ^ 0x51 ^ (bytes)`; get = `[0x82, 0x01, vcp, chk]` with `chk = 0x6E ^ (bytes)`. Parses the 11-byte get-reply (read from offset 0; `reply[6…7]` = max, `reply[8…9]` = current, `reply[10]` = `0x50 ^ reply[0…9]`) into `(current: UInt16, max: UInt16)` or an error. | nothing (pure) |
+| `DDCTransport` (protocol) | `write(_ packet: [UInt8]) -> Bool`, `read(count: Int) -> [UInt8]?` for one display. | — |
 | `Arm64DDCTransport` | Real transport. Private symbols (`IOAVServiceCreateWithService`, `IOAVServiceReadI2C`, `IOAVServiceWriteI2C`) resolved with `dlsym` from IOKit; missing symbols → transport unavailable (not a crash). | IOKit |
 | `DisplayRegistry` | Enumerates `CGGetOnlineDisplayList`, skips built-in (`CGDisplayIsBuiltin`), matches each to a `DCPAVServiceProxy` IORegistry entry (location `External`, EDID vendor/product/serial ↔ `CGDisplayVendorNumber`/`ModelNumber`/`SerialNumber`, same strategy as MonitorControl `Arm64DDC.getServiceMatches`). Publishes `[ExternalDisplay]`. | IOKit, CoreGraphics |
-| `DDCWriteCoalescer` | Accepts target values; if a write is in flight, replaces the pending value. Each write: up to 3 attempts, 20 ms apart, then ~50 ms settle delay. Reports success/failure to the display. | `DDCTransport` |
+| `DDCChannel` | `write(vcp:value:)` / `read(vcp:)`: up to 3 attempts, each = 2 write cycles 10 ms apart (+50 ms before reading a reply), 20 ms between attempts. | `DDCTransport` |
+| `DDCWriteCoalescer` | Accepts target values; if a write is in flight, replaces the pending value (latest wins). Reports success/failure of each write to the display. | `DDCChannel` |
 | `GammaDimmer` | Scales the display's original transfer table by factor `max(0.1, level)`. `restoreAll()` → `CGDisplayRestoreColorSyncSettings`. | `GammaApplying` protocol (CoreGraphics in prod) |
 | `DisplayControlRouter` | Decides where a key action goes and fires the HUD. | Registry, `BrightnessManager`, `VolumeManager`, `AudioOutputProviding` |
 
