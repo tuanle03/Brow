@@ -79,7 +79,12 @@ final class DisplayControlRouter {
         if display.ddcAvailable, let writer = display.brightnessWriter {
             display.brightness = clamp(display.brightness + delta)
             display.brightnessTouched = true
-            writer.submit(Self.ddcValue(display.brightness, max: display.brightnessMax))
+            writer.submit(Self.ddcValue(BrightnessScale.hardware(atPosition: display.brightness), max: display.brightnessMax))
+            let software = BrightnessScale.software(atPosition: display.brightness)
+            if software < 1 || display.softwareLevel < 1 {
+                display.softwareLevel = software
+                env.applyGamma(level: software, to: display.id)
+            }
             env.persistLevel(display.brightness, key: display.levelKey(.brightness))
             env.showHUD(.brightness, value: display.brightness)
         } else {

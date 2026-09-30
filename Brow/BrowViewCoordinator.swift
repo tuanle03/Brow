@@ -25,6 +25,8 @@ struct sneakPeek {
     var type: SneakContentType = .music
     var value: CGFloat = 0
     var icon: String = ""
+    /// Screen UUID the HUD belongs to; nil = shown on every screen.
+    var targetScreenUUID: String?
 }
 
 struct SharedSneakPeek: Codable {
@@ -288,7 +290,7 @@ class BrowViewCoordinator: ObservableObject {
 
     func toggleSneakPeek(
         status: Bool, type: SneakContentType, duration: TimeInterval = 1.5, value: CGFloat = 0,
-        icon: String = "", force: Bool = false
+        icon: String = "", force: Bool = false, screenUUID: String? = nil
     ) {
         sneakPeekDuration = duration
         if type != .music {
@@ -303,6 +305,7 @@ class BrowViewCoordinator: ObservableObject {
                 self.sneakPeek.type = type
                 self.sneakPeek.value = value
                 self.sneakPeek.icon = icon
+                self.sneakPeek.targetScreenUUID = screenUUID
             }
         }
 

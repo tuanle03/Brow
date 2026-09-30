@@ -55,7 +55,7 @@ final class DisplayControlRouterTests: XCTestCase {
     func testBrightnessUpWritesDDCAndShowsHUD() {
         router.perform(.brightnessUp, fine: false)
         XCTAssertEqual(display.brightness, 0.5625, accuracy: 1e-9)
-        XCTAssertEqual(brightnessWriter.values, [56])
+        XCTAssertEqual(brightnessWriter.values, [50]) // position 0.5625 → hardware (0.5625-0.125)/0.875 = 0.5
         XCTAssertEqual(env.huds.last?.type, .brightness)
         XCTAssertEqual(env.huds.last?.value ?? -1, 0.5625, accuracy: 1e-9)
         XCTAssertEqual(env.persisted["UUID-2.brightness"] ?? -1, 0.5625, accuracy: 1e-9)
@@ -63,7 +63,7 @@ final class DisplayControlRouterTests: XCTestCase {
 
     func testFineStep() {
         router.perform(.brightnessUp, fine: true)
-        XCTAssertEqual(brightnessWriter.values, [52]) // 0.515625 * 100
+        XCTAssertEqual(brightnessWriter.values, [45]) // position 0.515625 → hardware 0.446
     }
 
     func testBrightnessClampsAtBounds() {
@@ -74,6 +74,48 @@ final class DisplayControlRouterTests: XCTestCase {
         router.perform(.brightnessDown, fine: false)
         XCTAssertEqual(brightnessWriter.values.last, 0)
         XCTAssertEqual(display.brightness, 0)
+    }
+
+    // MARK: Brightness below the monitor's hardware minimum (hardware + software dimming)
+
+    func testBrightnessScaleMapping() {
+        XCTAssertEqual(BrightnessScale.hardware(atPosition: 0.125), 0, accuracy: 1e-9)
+        XCTAssertEqual(BrightnessScale.hardware(atPosition: 1), 1, accuracy: 1e-9)
+        XCTAssertEqual(BrightnessScale.hardware(atPosition: 0), 0, accuracy: 1e-9)
+        XCTAssertEqual(BrightnessScale.software(atPosition: 0.125), 1, accuracy: 1e-9)
+        XCTAssertEqual(BrightnessScale.software(atPosition: 0.0625), 0.6, accuracy: 1e-9)
+        XCTAssertEqual(BrightnessScale.software(atPosition: 0), BrightnessScale.softwareFloor, accuracy: 1e-9)
+        XCTAssertEqual(BrightnessScale.position(hardware: 0.5), 0.5625, accuracy: 1e-9)
+    }
+
+    func testBrightnessBelowHardwareZeroUsesGamma() {
+        display.brightness = 0.125 // hardware already at 0
+        router.perform(.brightnessDown, fine: false)
+        XCTAssertEqual(display.brightness, 0.0625, accuracy: 1e-9)
+        XCTAssertEqual(brightnessWriter.values.last, 0)
+        XCTAssertEqual(env.gamma.last?.id, 2)
+        XCTAssertEqual(env.gamma.last?.level ?? -1, 0.6, accuracy: 1e-9)
+        XCTAssertEqual(env.huds.last?.value ?? -1, 0.0625, accuracy: 1e-9)
+    }
+
+    func testBrightnessZeroReachesSoftwareFloor() {
+        display.brightness = 0.0625
+        router.perform(.brightnessDown, fine: false)
+        XCTAssertEqual(display.brightness, 0, accuracy: 1e-9)
+        XCTAssertEqual(env.gamma.last?.level ?? -1, BrightnessScale.softwareFloor, accuracy: 1e-9)
+    }
+
+    func testBrightnessUpLeavingSoftwareZoneRestoresGamma() {
+        display.brightness = 0.0625
+        display.softwareLevel = 0.6 // gamma was applied when we entered the zone
+        router.perform(.brightnessUp, fine: false)
+        XCTAssertEqual(display.brightness, 0.125, accuracy: 1e-9)
+        XCTAssertEqual(env.gamma.last?.level ?? -1, 1, accuracy: 1e-9)
+    }
+
+    func testNormalBrightnessDoesNotTouchGamma() {
+        router.perform(.brightnessUp, fine: false)
+        XCTAssertTrue(env.gamma.isEmpty)
     }
 
     func testCursorOnBuiltinUsesBrightnessManagerPath() {
@@ -199,6 +241,11 @@ final class DisplayControlRouterTests: XCTestCase {
         XCTAssertEqual(display.brightness, 0.5625, accuracy: 1e-9, "user already pressed a key — keep their value")
         XCTAssertEqual(display.brightnessMax, 200)
         XCTAssertEqual(display.volume, 0.3, accuracy: 1e-9)
+    }
+
+    func testInitialBrightnessReadingMapsIntoScale() {
+        display.applyInitialReadings(brightness: DDCReading(current: 50, max: 100), volume: nil)
+        XCTAssertEqual(display.brightness, 0.5625, accuracy: 1e-9)
     }
 
     func testStatusLabel() {

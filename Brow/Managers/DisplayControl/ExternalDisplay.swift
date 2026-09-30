@@ -63,7 +63,7 @@ final class ExternalDisplay: Identifiable {
     func applyInitialReadings(brightness b: DDCReading?, volume v: DDCReading?) {
         if let b {
             brightnessMax = b.max
-            if !brightnessTouched { brightness = Double(b.current) / Double(b.max) }
+            if !brightnessTouched { brightness = BrightnessScale.position(hardware: Double(b.current) / Double(b.max)) }
         }
         if let v {
             volumeMax = v.max
@@ -88,5 +88,25 @@ final class ExternalDisplay: Identifiable {
     func statusLabel(hasSpeakers: Bool) -> String {
         guard ddcAvailable else { return "Software dimming" }
         return hasSpeakers && volumeWriter != nil ? "DDC + speakers" : "DDC"
+    }
+}
+
+/// One brightness axis for a DDC monitor: position 1 → hardware max, down to
+/// `softwareZone` → hardware minimum (VCP 0x10 = 0, which on many panels is
+/// still readable), then gamma dimming takes over down to `softwareFloor`.
+enum BrightnessScale {
+    static let softwareZone = 0.125
+    static let softwareFloor = 0.2
+
+    static func hardware(atPosition p: Double) -> Double {
+        max(0, (p - softwareZone) / (1 - softwareZone))
+    }
+
+    static func software(atPosition p: Double) -> Double {
+        p >= softwareZone ? 1 : softwareFloor + (1 - softwareFloor) * (max(0, p) / softwareZone)
+    }
+
+    static func position(hardware h: Double) -> Double {
+        softwareZone + h * (1 - softwareZone)
     }
 }

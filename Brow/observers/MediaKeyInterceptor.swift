@@ -57,6 +57,7 @@ final class MediaKeyInterceptor {
         
         // Check accessibility authorization
         let authorized = await XPCHelperClient.shared.isAccessibilityAuthorized()
+        fputs("[MediaKeyInterceptor] start: accessibility authorized=\(authorized) prompt=\(promptIfNeeded)\n", stderr)
         if !authorized {
             if promptIfNeeded {
                 let granted = await ensureAccessibilityAuthorization(promptIfNeeded: true)
@@ -85,6 +86,7 @@ final class MediaKeyInterceptor {
             userInfo: UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
         )
         
+        fputs("[MediaKeyInterceptor] tap created=\(eventTap != nil)\n", stderr)
         if let eventTap {
             runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0)
             if let runLoopSource {
@@ -173,6 +175,9 @@ final class MediaKeyInterceptor {
 
     private func handleKeyEvent(type: CGEventType, _ cgEvent: CGEvent) -> Unmanaged<CGEvent>? {
         let keyCode = Int(cgEvent.getIntegerValueField(.keyboardEventKeycode))
+        if type == .keyDown, [120, 122, 109, 103, 111].contains(keyCode) {
+            fputs("[MediaKeyInterceptor] keyDown code=\(keyCode) flags=\(cgEvent.flags.rawValue) feature=\(Defaults[.externalDisplayControl])\n", stderr)
+        }
         if type == .keyUp {
             return swallowedKeys.shouldSwallowUp(keyCode) ? nil : Unmanaged.passUnretained(cgEvent)
         }

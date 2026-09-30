@@ -104,7 +104,9 @@ final class DisplayControlCenter: ObservableObject, DisplayControlEnvironment {
                 brightnessWriter: brightnessWriter, volumeWriter: volumeWriter,
                 brightness: levels[ExternalDisplay.levelKey(uuid: uuid, kind: .brightness)] ?? 0.5,
                 volume: levels[ExternalDisplay.levelKey(uuid: uuid, kind: .volume)] ?? 0.5,
-                softwareLevel: levels[ExternalDisplay.levelKey(uuid: uuid, kind: .software)] ?? 1
+                // A rebuild resets gamma, so DDC displays restart at full software level;
+                // the persisted level only matters for the gamma-only fallback.
+                softwareLevel: channel == nil ? levels[ExternalDisplay.levelKey(uuid: uuid, kind: .software)] ?? 1 : 1
             )
             for writer in [brightnessWriter, volumeWriter].compactMap({ $0 }) {
                 writer.onResult = { [weak display] ok in
@@ -177,7 +179,9 @@ final class DisplayControlCenter: ObservableObject, DisplayControlEnvironment {
     }
 
     func showHUD(_ type: SneakContentType, value: Double) {
-        BrowViewCoordinator.shared.toggleSneakPeek(status: true, type: type, value: CGFloat(value), force: true)
+        // Only the screen the pointer is on shows the HUD.
+        let screen = NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) }
+        BrowViewCoordinator.shared.toggleSneakPeek(status: true, type: type, value: CGFloat(value), force: true, screenUUID: screen?.displayUUID)
     }
 
     func adjustBuiltinBrightness(delta: Float) {
