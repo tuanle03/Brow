@@ -69,7 +69,12 @@ enum ShortcutMatcher {
         return .none
     }
 
+    /// Cached; see `DisplayKeyCarbonGuard`.
     static func currentBindings() -> [ShortcutBinding] {
+        DisplayKeyCarbonGuard.bindings()
+    }
+
+    static func readBindings() -> [ShortcutBinding] {
         DisplayKeyAction.allCases.compactMap { action in
             KeyboardShortcuts.getShortcut(for: action.shortcutName).map { ShortcutBinding(action: action, shortcut: $0) }
         }
@@ -87,5 +92,55 @@ struct SwallowedKeyTracker {
 
     mutating func shouldSwallowUp(_ keyCode: Int) -> Bool {
         keyCodes.remove(keyCode) != nil
+    }
+}
+
+/// `KeyboardShortcuts` registers every named shortcut as a Carbon global
+/// hotkey — on first touch of a `default:` and on every recording — which
+/// would swallow F1/F2/F10-F12 system-wide even when Brow's event tap is not
+/// the one handling them. These names are used for storage + recorder UI
+/// only, so their Carbon registration is undone after every change. The
+/// same change notification invalidates the cached bindings.
+enum DisplayKeyCarbonGuard {
+    private static let lock = NSLock()
+    private static var observer: NSObjectProtocol?
+    private static var cachedBindings: [ShortcutBinding]?
+
+    static func install() {
+        lock.lock()
+        let needsObserver = observer == nil
+        if needsObserver {
+            observer = NotificationCenter.default.addObserver(
+                forName: Notification.Name("KeyboardShortcuts_shortcutByNameDidChange"), object: nil, queue: nil
+            ) { note in
+                guard let name = note.userInfo?["name"] as? KeyboardShortcuts.Name,
+                      DisplayKeyAction.allCases.contains(where: { $0.shortcutName == name }) else { return }
+                lock.lock()
+                cachedBindings = nil
+                lock.unlock()
+                disableAll()
+            }
+        }
+        cachedBindings = nil
+        lock.unlock()
+        disableAll()
+    }
+
+    static func bindings() -> [ShortcutBinding] {
+        lock.lock()
+        if let cachedBindings {
+            lock.unlock()
+            return cachedBindings
+        }
+        lock.unlock()
+        let fresh = ShortcutMatcher.readBindings()
+        lock.lock()
+        cachedBindings = fresh
+        lock.unlock()
+        return fresh
+    }
+
+    private static func disableAll() {
+        KeyboardShortcuts.disable(DisplayKeyAction.allCases.map(\.shortcutName))
     }
 }

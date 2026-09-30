@@ -178,6 +178,9 @@ class BrowViewCoordinator: ObservableObject {
             queue: .main
         ) { _ in
             Task { @MainActor in
+                if Defaults[.externalDisplayControl] {
+                    DisplayControlCenter.shared.start()
+                }
                 if Defaults[.hudReplacement] || Defaults[.externalDisplayControl] {
                     await MediaKeyInterceptor.shared.start(promptIfNeeded: false)
                 }
@@ -234,11 +237,12 @@ class BrowViewCoordinator: ObservableObject {
         Task { @MainActor in
             helloAnimationRunning = firstLaunch
 
-            if Defaults[.externalDisplayControl] {
+            DisplayKeyCarbonGuard.install()
+            // Without Accessibility the tap cannot run, so the feature stays fully inert —
+            // no DDC traffic, and no gamma dimming the user could not undo.
+            if Defaults[.externalDisplayControl], await XPCHelperClient.shared.isAccessibilityAuthorized() {
                 DisplayControlCenter.shared.start()
-                if await XPCHelperClient.shared.isAccessibilityAuthorized() {
-                    await MediaKeyInterceptor.shared.start(promptIfNeeded: false)
-                }
+                await MediaKeyInterceptor.shared.start(promptIfNeeded: false)
             }
 
             if Defaults[.hudReplacement] {

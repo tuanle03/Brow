@@ -1,4 +1,6 @@
 import AppKit
+import KeyboardShortcuts
+import Carbon.HIToolbox
 import XCTest
 @testable import Brow
 
@@ -69,5 +71,44 @@ final class DisplayKeyBindingsTests: XCTestCase {
         XCTAssertTrue(tracker.shouldSwallowUp(122))
         XCTAssertFalse(tracker.shouldSwallowUp(122))
         XCTAssertFalse(tracker.shouldSwallowUp(120), "keyUp for a key we never swallowed passes through")
+    }
+}
+
+/// Review finding C1: `KeyboardShortcuts.Name(default:)` and the Settings
+/// recorder register Carbon global hotkeys, which swallow F1/F2/F10-F12
+/// system-wide whenever Brow's event tap is not the one taking them.
+final class DisplayKeyCarbonGuardTests: XCTestCase {
+    override func tearDown() {
+        DisplayKeyAction.allCases.forEach { KeyboardShortcuts.reset($0.shortcutName) }
+        super.tearDown()
+    }
+
+    /// RegisterEventHotKey fails with eventHotKeyExistsErr if this process already owns the combo.
+    private func canRegisterCarbonHotKey(keyCode: Int, carbonModifiers: Int) -> Bool {
+        var ref: EventHotKeyRef?
+        let id = EventHotKeyID(signature: OSType(0x42524F57), id: 4242)
+        let status = RegisterEventHotKey(UInt32(keyCode), UInt32(carbonModifiers), id, GetApplicationEventTarget(), 0, &ref)
+        if let ref { UnregisterEventHotKey(ref) }
+        return status == noErr
+    }
+
+    func testDefaultBindingsAreNotCarbonHotKeys() {
+        DisplayKeyCarbonGuard.install()
+        for code in [122, 120, 109, 103, 111] {
+            XCTAssertTrue(canRegisterCarbonHotKey(keyCode: code, carbonModifiers: 0), "keyCode \(code) is held by a Carbon hotkey")
+        }
+    }
+
+    func testRecordedBindingIsNotACarbonHotKey() {
+        DisplayKeyCarbonGuard.install()
+        KeyboardShortcuts.setShortcut(.init(.f1, modifiers: [.control]), for: .displayBrightnessDown)
+        XCTAssertTrue(canRegisterCarbonHotKey(keyCode: 122, carbonModifiers: 4096), "⌃F1 was registered as a Carbon hotkey after recording")
+    }
+
+    func testBindingCacheTracksRecordedShortcut() {
+        DisplayKeyCarbonGuard.install()
+        XCTAssertEqual(ShortcutMatcher.currentBindings().first { $0.action == .brightnessDown }?.modifiers, [])
+        KeyboardShortcuts.setShortcut(.init(.f1, modifiers: [.control]), for: .displayBrightnessDown)
+        XCTAssertEqual(ShortcutMatcher.currentBindings().first { $0.action == .brightnessDown }?.modifiers, [.control])
     }
 }

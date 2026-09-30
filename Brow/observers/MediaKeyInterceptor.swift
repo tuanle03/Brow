@@ -46,7 +46,7 @@ final class MediaKeyInterceptor {
     
     // MARK: - Event Tap
     
-    func start(promptIfNeeded: Bool = false) async {
+    @MainActor func start(promptIfNeeded: Bool = false) async {
         guard eventTap == nil else { return }
         
         // The tap serves both the HUD replacement and external-display keys
@@ -66,6 +66,9 @@ final class MediaKeyInterceptor {
             }
         }
         
+        // The awaits above suspend; a concurrent start() may have installed the tap meanwhile.
+        guard eventTap == nil else { return }
+
         let mask = CGEventMask(1 << kSystemDefinedEventType.rawValue)
             | CGEventMask(1 << CGEventType.keyDown.rawValue)
             | CGEventMask(1 << CGEventType.keyUp.rawValue)
@@ -116,12 +119,12 @@ final class MediaKeyInterceptor {
 
         // Ensure the CGEvent has a valid type before converting to NSEvent
         guard cgEvent.type != .null else {
-            return Unmanaged.passRetained(cgEvent)
+            return Unmanaged.passUnretained(cgEvent)
         }
         guard let nsEvent = NSEvent(cgEvent: cgEvent),
               nsEvent.type == .systemDefined,
               nsEvent.subtype.rawValue == 8 else {
-            return Unmanaged.passRetained(cgEvent)
+            return Unmanaged.passUnretained(cgEvent)
         }
         
         let data1 = nsEvent.data1
@@ -131,7 +134,7 @@ final class MediaKeyInterceptor {
         // 0xA = key down, 0xB = key up. Only handle key down.
         guard stateByte == 0xA,
               let keyType = NXKeyType(rawValue: keyCode) else {
-            return Unmanaged.passRetained(cgEvent)
+            return Unmanaged.passUnretained(cgEvent)
         }
         
         let flags = nsEvent.modifierFlags
@@ -143,14 +146,15 @@ final class MediaKeyInterceptor {
         if Defaults[.externalDisplayControl], let action = displayAction(for: keyType, command: command) {
             let router = MainActor.assumeIsolated { DisplayControlCenter.shared.router }
             if MainActor.assumeIsolated({ router.claimsMediaKey(action) }) {
-                MainActor.assumeIsolated { router.perform(action, fine: option && shift) }
+                let fine = option && shift
+                DispatchQueue.main.async { MainActor.assumeIsolated { router.perform(action, fine: fine) } }
                 return nil
             }
         }
 
         // Everything else is the HUD replacement's job; without it, leave the key to macOS.
         guard Defaults[.hudReplacement] else {
-            return Unmanaged.passRetained(cgEvent)
+            return Unmanaged.passUnretained(cgEvent)
         }
 
         // Handle option key action (without shift)
@@ -180,12 +184,18 @@ final class MediaKeyInterceptor {
             keyCode: keyCode,
             flags: flags,
             bindings: ShortcutMatcher.currentBindings(),
-            suspended: isRecordingShortcut()
+            suspended: false
         )
-        guard case let .action(action, fine) = match else { return Unmanaged.passUnretained(cgEvent) }
+        // Cheap match first; the responder-chain lookup only runs for bound keys.
+        guard case let .action(action, fine) = match, !isRecordingShortcut() else {
+            return Unmanaged.passUnretained(cgEvent)
+        }
 
         swallowedKeys.noteSwallowedDown(keyCode)
-        MainActor.assumeIsolated { DisplayControlCenter.shared.router.perform(action, fine: fine) }
+        // Keep the tap callback fast: macOS disables taps that block for ~1 s.
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated { DisplayControlCenter.shared.router.perform(action, fine: fine) }
+        }
         return nil
     }
 

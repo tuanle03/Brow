@@ -640,11 +640,11 @@ struct HUD: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer(minLength: 40)
+                    // Stays enabled without Accessibility so the feature can always be switched off.
                     Defaults.Toggle("", key: .externalDisplayControl)
                         .labelsHidden()
                         .toggleStyle(.switch)
                         .controlSize(.large)
-                        .disabled(!accessibilityAuthorized)
                 }
 
                 Group {
