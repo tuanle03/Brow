@@ -35,6 +35,13 @@ struct ContentView: View {
     /// others stuck open.
     @State private var notchWasOpenBeforeAI: Bool = false
 
+    /// External-display HUDs carry the UUID of the screen under the pointer;
+    /// every other sneak peek has no target and shows on all screens.
+    private var sneakPeekTargetsThisScreen: Bool {
+        guard let target = coordinator.sneakPeek.targetScreenUUID else { return true }
+        return target == vm.screenUUID
+    }
+
     /// Task 2.7: brief `.approved`/`.denied` flash for the v8 closed pill's
     /// `.mascot` case, set from `claudeStore.recentlyResolved` (still the
     /// live source of truth for decisions) and self-cleared back to nil
@@ -363,7 +370,7 @@ struct ContentView: View {
                             .frame(width: 76, alignment: .trailing)
                         }
                         .frame(height: vm.effectiveClosedNotchHeight, alignment: .center)
-                      } else if coordinator.sneakPeek.show && Defaults[.inlineHUD] && (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && vm.notchState == .closed {
+                      } else if (coordinator.sneakPeek.show && sneakPeekTargetsThisScreen) && Defaults[.inlineHUD] && (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && vm.notchState == .closed {
                           InlineHUD(type: $coordinator.sneakPeek.type, value: $coordinator.sneakPeek.value, icon: $coordinator.sneakPeek.icon, hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
                               .transition(.opacity)
                       } else if (!coordinator.expandingView.show || coordinator.expandingView.type == .music) && vm.notchState == .closed && !vm.hideOnClosed && v8ClosedPillContent != .empty {
@@ -399,7 +406,7 @@ struct ContentView: View {
                            Rectangle().fill(.clear).frame(width: vm.closedNotchSize.width - 20, height: vm.effectiveClosedNotchHeight)
                        }
 
-                      if coordinator.sneakPeek.show {
+                      if (coordinator.sneakPeek.show && sneakPeekTargetsThisScreen) {
                           if (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && !Defaults[.inlineHUD] && vm.notchState == .closed {
                               SystemEventIndicatorModifier(
                                   eventType: $coordinator.sneakPeek.type,
@@ -436,7 +443,7 @@ struct ContentView: View {
                       }
                   }
               }
-              .conditionalModifier((coordinator.sneakPeek.show && (coordinator.sneakPeek.type == .music) && vm.notchState == .closed && !vm.hideOnClosed && Defaults[.sneakPeekStyles] == .standard) || (coordinator.sneakPeek.show && (coordinator.sneakPeek.type != .music) && (vm.notchState == .closed))) { view in
+              .conditionalModifier(((coordinator.sneakPeek.show && sneakPeekTargetsThisScreen) && (coordinator.sneakPeek.type == .music) && vm.notchState == .closed && !vm.hideOnClosed && Defaults[.sneakPeekStyles] == .standard) || ((coordinator.sneakPeek.show && sneakPeekTargetsThisScreen) && (coordinator.sneakPeek.type != .music) && (vm.notchState == .closed))) { view in
                   view
                       .fixedSize()
               }

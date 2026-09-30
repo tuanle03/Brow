@@ -209,6 +209,10 @@ extension Defaults.Keys {
     static let showClosedNotchHUDPercentage = Key<Bool>("showClosedNotchHUDPercentage", default: false)
     // Option key modifier behaviour for media keys
     static let optionKeyAction = Key<OptionKeyAction>("optionKeyAction", default: OptionKeyAction.openSettings)
+    // External display brightness/volume keys (DDC/CI)
+    static let externalDisplayControl = Key<Bool>("externalDisplayControl", default: true)
+    /// "<displayUUID>.brightness" | ".volume" | ".software" → 0…1
+    static let externalDisplayLevels = Key<[String: Double]>("externalDisplayLevels", default: [:])
     
     // MARK: Shelf
     static let boringShelf = Key<Bool>("boringShelf", default: true)

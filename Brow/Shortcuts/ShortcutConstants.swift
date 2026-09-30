@@ -19,4 +19,11 @@ extension KeyboardShortcuts.Name {
     static let aiApprovalAllow       = Self("aiApprovalAllow",       default: .init(.return, modifiers: [.command]))
     static let aiApprovalAllowAlways = Self("aiApprovalAllowAlways", default: .init(.return, modifiers: [.command, .shift]))
     static let aiApprovalDeny        = Self("aiApprovalDeny",        default: .init(.escape, modifiers: [.command]))
+    // External displays — matched in MediaKeyInterceptor's event tap, never
+    // registered as Carbon hotkeys (so bare F-keys and autorepeat work).
+    static let displayBrightnessDown = Self("displayBrightnessDown", default: .init(.f1))
+    static let displayBrightnessUp   = Self("displayBrightnessUp",   default: .init(.f2))
+    static let displayVolumeMute     = Self("displayVolumeMute",     default: .init(.f10))
+    static let displayVolumeDown     = Self("displayVolumeDown",     default: .init(.f11))
+    static let displayVolumeUp       = Self("displayVolumeUp",       default: .init(.f12))
 }

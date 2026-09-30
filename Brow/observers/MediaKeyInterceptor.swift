@@ -9,6 +9,7 @@ import AppKit
 import ApplicationServices
 import Defaults
 import AVFoundation
+import KeyboardShortcuts
 
 private let kSystemDefinedEventType = CGEventType(rawValue: 14)!
 
@@ -29,6 +30,7 @@ final class MediaKeyInterceptor {
     private var runLoopSource: CFRunLoopSource?
     private let step: Float = 1.0 / 16.0
     private var audioPlayer: AVAudioPlayer?
+    private var swallowedKeys = SwallowedKeyTracker()
     
     private init() {}
     
@@ -44,17 +46,18 @@ final class MediaKeyInterceptor {
     
     // MARK: - Event Tap
     
-    func start(promptIfNeeded: Bool = false) async {
+    @MainActor func start(promptIfNeeded: Bool = false) async {
         guard eventTap == nil else { return }
         
-        // Ensure HUD replacement is enabled
-        guard Defaults[.hudReplacement] else {
+        // The tap serves both the HUD replacement and external-display keys
+        guard Defaults[.hudReplacement] || Defaults[.externalDisplayControl] else {
             stop()
             return
         }
         
         // Check accessibility authorization
         let authorized = await XPCHelperClient.shared.isAccessibilityAuthorized()
+        fputs("[MediaKeyInterceptor] start: accessibility authorized=\(authorized) prompt=\(promptIfNeeded)\n", stderr)
         if !authorized {
             if promptIfNeeded {
                 let granted = await ensureAccessibilityAuthorization(promptIfNeeded: true)
@@ -64,20 +67,26 @@ final class MediaKeyInterceptor {
             }
         }
         
+        // The awaits above suspend; a concurrent start() may have installed the tap meanwhile.
+        guard eventTap == nil else { return }
+
         let mask = CGEventMask(1 << kSystemDefinedEventType.rawValue)
+            | CGEventMask(1 << CGEventType.keyDown.rawValue)
+            | CGEventMask(1 << CGEventType.keyUp.rawValue)
         eventTap = CGEvent.tapCreate(
             tap: .cghidEventTap,
             place: .headInsertEventTap,
             options: .defaultTap,
             eventsOfInterest: mask,
-            callback: { _, _, cgEvent, userInfo in
-                guard let userInfo else { return Unmanaged.passRetained(cgEvent) }
+            callback: { _, type, cgEvent, userInfo in
+                guard let userInfo else { return Unmanaged.passUnretained(cgEvent) }
                 let interceptor = Unmanaged<MediaKeyInterceptor>.fromOpaque(userInfo).takeUnretainedValue()
-                return interceptor.handleEvent(cgEvent)
+                return interceptor.handleEvent(type: type, cgEvent)
             },
             userInfo: UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
         )
         
+        fputs("[MediaKeyInterceptor] tap created=\(eventTap != nil)\n", stderr)
         if let eventTap {
             runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0)
             if let runLoopSource {
@@ -100,15 +109,24 @@ final class MediaKeyInterceptor {
     
     // MARK: - Event Handling
     
-    private func handleEvent(_ cgEvent: CGEvent) -> Unmanaged<CGEvent>? {
+    private func handleEvent(type: CGEventType, _ cgEvent: CGEvent) -> Unmanaged<CGEvent>? {
+        // macOS disables slow taps; turn it straight back on.
+        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            if let eventTap { CGEvent.tapEnable(tap: eventTap, enable: true) }
+            return Unmanaged.passUnretained(cgEvent)
+        }
+        if type == .keyDown || type == .keyUp {
+            return handleKeyEvent(type: type, cgEvent)
+        }
+
         // Ensure the CGEvent has a valid type before converting to NSEvent
         guard cgEvent.type != .null else {
-            return Unmanaged.passRetained(cgEvent)
+            return Unmanaged.passUnretained(cgEvent)
         }
         guard let nsEvent = NSEvent(cgEvent: cgEvent),
               nsEvent.type == .systemDefined,
               nsEvent.subtype.rawValue == 8 else {
-            return Unmanaged.passRetained(cgEvent)
+            return Unmanaged.passUnretained(cgEvent)
         }
         
         let data1 = nsEvent.data1
@@ -118,14 +136,29 @@ final class MediaKeyInterceptor {
         // 0xA = key down, 0xB = key up. Only handle key down.
         guard stateByte == 0xA,
               let keyType = NXKeyType(rawValue: keyCode) else {
-            return Unmanaged.passRetained(cgEvent)
+            return Unmanaged.passUnretained(cgEvent)
         }
         
         let flags = nsEvent.modifierFlags
         let option = flags.contains(.option)
         let shift = flags.contains(.shift)
         let command = flags.contains(.command)
-        
+
+        // External monitor under the cursor / monitor speakers as output → DDC.
+        if Defaults[.externalDisplayControl], let action = displayAction(for: keyType, command: command) {
+            let router = MainActor.assumeIsolated { DisplayControlCenter.shared.router }
+            if MainActor.assumeIsolated({ router.claimsMediaKey(action) }) {
+                let fine = option && shift
+                DispatchQueue.main.async { MainActor.assumeIsolated { router.perform(action, fine: fine) } }
+                return nil
+            }
+        }
+
+        // Everything else is the HUD replacement's job; without it, leave the key to macOS.
+        guard Defaults[.hudReplacement] else {
+            return Unmanaged.passUnretained(cgEvent)
+        }
+
         // Handle option key action (without shift)
         if option && !shift {
             if handleOptionAction(for: keyType, command: command) {
@@ -138,6 +171,58 @@ final class MediaKeyInterceptor {
         return nil
     }
     
+    // MARK: - External display keys (any keyboard)
+
+    private func handleKeyEvent(type: CGEventType, _ cgEvent: CGEvent) -> Unmanaged<CGEvent>? {
+        let keyCode = Int(cgEvent.getIntegerValueField(.keyboardEventKeycode))
+        if type == .keyUp {
+            return swallowedKeys.shouldSwallowUp(keyCode) ? nil : Unmanaged.passUnretained(cgEvent)
+        }
+        guard Defaults[.externalDisplayControl] else { return Unmanaged.passUnretained(cgEvent) }
+
+        // CGEventFlags and NSEvent.ModifierFlags share bit values.
+        let flags = NSEvent.ModifierFlags(rawValue: UInt(cgEvent.flags.rawValue))
+        let match = ShortcutMatcher.match(
+            keyCode: keyCode,
+            flags: flags,
+            bindings: ShortcutMatcher.currentBindings(),
+            suspended: false
+        )
+        // Cheap match first; the responder-chain lookup only runs for bound keys.
+        guard case let .action(action, fine) = match, !isRecordingShortcut() else {
+            return Unmanaged.passUnretained(cgEvent)
+        }
+
+        swallowedKeys.noteSwallowedDown(keyCode)
+        // Keep the tap callback fast: macOS disables taps that block for ~1 s.
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated { DisplayControlCenter.shared.router.perform(action, fine: fine) }
+        }
+        return nil
+    }
+
+    /// While a KeyboardShortcuts recorder in Brow's Settings has focus, keys
+    /// must reach it so the user can record F1 etc.
+    private func isRecordingShortcut() -> Bool {
+        MainActor.assumeIsolated {
+            guard NSApp.isActive, let responder = NSApp.keyWindow?.firstResponder else { return false }
+            if responder is KeyboardShortcuts.RecorderCocoa { return true }
+            if let editor = responder as? NSTextView, editor.delegate is KeyboardShortcuts.RecorderCocoa { return true }
+            return false
+        }
+    }
+
+    private func displayAction(for keyType: NXKeyType, command: Bool) -> DisplayKeyAction? {
+        switch keyType {
+        case .brightnessUp: return command ? nil : .brightnessUp       // ⌘ = keyboard backlight
+        case .brightnessDown: return command ? nil : .brightnessDown
+        case .soundUp: return .volumeUp
+        case .soundDown: return .volumeDown
+        case .mute: return .volumeMute
+        case .keyboardBrightnessUp, .keyboardBrightnessDown: return nil
+        }
+    }
+
     private func handleOptionAction(for keyType: NXKeyType, command: Bool) -> Bool {
         let action = Defaults[.optionKeyAction]
         

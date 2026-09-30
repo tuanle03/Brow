@@ -25,6 +25,8 @@ struct sneakPeek {
     var type: SneakContentType = .music
     var value: CGFloat = 0
     var icon: String = ""
+    /// Screen UUID the HUD belongs to; nil = shown on every screen.
+    var targetScreenUUID: String?
 }
 
 struct SharedSneakPeek: Codable {
@@ -124,6 +126,7 @@ class BrowViewCoordinator: ObservableObject {
     @Published var optionKeyPressed: Bool = true
     private var accessibilityObserver: Any?
     private var hudReplacementCancellable: AnyCancellable?
+    private var externalDisplayControlCancellable: AnyCancellable?
 
     private init() {
         // Perform migration from name-based to UUID-based storage
@@ -177,7 +180,10 @@ class BrowViewCoordinator: ObservableObject {
             queue: .main
         ) { _ in
             Task { @MainActor in
-                if Defaults[.hudReplacement] {
+                if Defaults[.externalDisplayControl] {
+                    DisplayControlCenter.shared.start()
+                }
+                if Defaults[.hudReplacement] || Defaults[.externalDisplayControl] {
                     await MediaKeyInterceptor.shared.start(promptIfNeeded: false)
                 }
             }
@@ -203,14 +209,43 @@ class BrowViewCoordinator: ObservableObject {
                                 Defaults[.hudReplacement] = false
                             }
                         }
-                    } else {
+                    } else if !Defaults[.externalDisplayControl] {
                         MediaKeyInterceptor.shared.stop()
+                    }
+                }
+            }
+
+        // `options: []` — no initial emission, so launch never prompts for Accessibility.
+        externalDisplayControlCancellable = Defaults.publisher(.externalDisplayControl, options: [])
+            .sink { change in
+                Task { @MainActor in
+                    if change.newValue {
+                        DisplayControlCenter.shared.start()
+                        let granted = await XPCHelperClient.shared.ensureAccessibilityAuthorization(promptIfNeeded: true)
+                        if granted {
+                            await MediaKeyInterceptor.shared.start()
+                        } else {
+                            Defaults[.externalDisplayControl] = false
+                        }
+                    } else {
+                        DisplayControlCenter.shared.stop()
+                        if !Defaults[.hudReplacement] {
+                            MediaKeyInterceptor.shared.stop()
+                        }
                     }
                 }
             }
 
         Task { @MainActor in
             helloAnimationRunning = firstLaunch
+
+            DisplayKeyCarbonGuard.install()
+            // Without Accessibility the tap cannot run, so the feature stays fully inert —
+            // no DDC traffic, and no gamma dimming the user could not undo.
+            if Defaults[.externalDisplayControl], await XPCHelperClient.shared.isAccessibilityAuthorized() {
+                DisplayControlCenter.shared.start()
+                await MediaKeyInterceptor.shared.start(promptIfNeeded: false)
+            }
 
             if Defaults[.hudReplacement] {
                 let authorized = await XPCHelperClient.shared.isAccessibilityAuthorized()
@@ -255,12 +290,12 @@ class BrowViewCoordinator: ObservableObject {
 
     func toggleSneakPeek(
         status: Bool, type: SneakContentType, duration: TimeInterval = 1.5, value: CGFloat = 0,
-        icon: String = ""
+        icon: String = "", force: Bool = false, screenUUID: String? = nil
     ) {
         sneakPeekDuration = duration
         if type != .music {
             // close()
-            if !Defaults[.hudReplacement] {
+            if !Defaults[.hudReplacement] && !force {
                 return
             }
         }
@@ -270,6 +305,7 @@ class BrowViewCoordinator: ObservableObject {
                 self.sneakPeek.type = type
                 self.sneakPeek.value = value
                 self.sneakPeek.icon = icon
+                self.sneakPeek.targetScreenUUID = screenUUID
             }
         }
 
